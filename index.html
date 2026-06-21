@@ -1,0 +1,233 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>双極症 体調ログ</title>
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">Daily Rhythm Tracker</p>
+        <h1>双極症 体調ログ</h1>
+      </div>
+      <div class="status-pill" id="todayStatus">未記録</div>
+    </header>
+
+    <main class="shell">
+      <nav class="tabs" aria-label="画面切り替え">
+        <button class="tab is-active" data-view="today" type="button">今日</button>
+        <button class="tab" data-view="trends" type="button">傾向</button>
+        <button class="tab" data-view="plan" type="button">プラン</button>
+        <button class="tab" data-view="data" type="button">データ</button>
+      </nav>
+
+      <section class="view is-active" id="today">
+        <form class="panel entry-form" id="entryForm">
+          <div class="form-head">
+            <div>
+              <h2>今日の記録</h2>
+              <p>睡眠、気分、暮らしのサインを日ごとに残します。</p>
+            </div>
+            <label class="date-field">
+              <span>日付</span>
+              <input id="entryDate" name="date" type="date" required>
+            </label>
+          </div>
+
+          <div class="grid one">
+            <fieldset class="control-block">
+              <legend>気分</legend>
+              <div class="mood-meter">
+                <div class="mood-face" id="moodFace" aria-hidden="true">
+                  <svg viewBox="0 0 64 64" role="img" focusable="false">
+                    <circle class="face-bg" cx="32" cy="32" r="30"></circle>
+                    <circle class="face-eye" id="moodEyeLeft" cx="23" cy="26" r="3.6"></circle>
+                    <circle class="face-eye" id="moodEyeRight" cx="41" cy="26" r="3.6"></circle>
+                    <path class="face-mouth" id="moodMouth" d="M21 40 Q32 47 43 40"></path>
+                  </svg>
+                </div>
+                <div class="mood-control">
+                  <div class="range-row">
+                    <span>-5</span>
+                    <input id="mood" name="mood" type="range" min="-5" max="5" step="1" value="0">
+                    <span>+5</span>
+                  </div>
+                  <div class="mood-readout">
+                    <output id="moodOut" for="mood">0</output>
+                    <span id="moodLabel">落ち着いている</span>
+                  </div>
+                  <label class="field stress-inline">
+                    <span>ストレス 任意</span>
+                    <select id="stress" name="stress">
+                      <option value="none">未入力</option>
+                      <option value="low">低い</option>
+                      <option value="medium">ふつう</option>
+                      <option value="high">高い</option>
+                    </select>
+                  </label>
+                </div>
+              </div>
+            </fieldset>
+          </div>
+
+          <div class="grid three">
+            <label class="field">
+              <span>就寝時間</span>
+              <select id="bedtime" name="bedtime"></select>
+            </label>
+            <label class="field">
+              <span>起床時間</span>
+              <select id="wakeTime" name="wakeTime"></select>
+            </label>
+            <div class="sleep-result" aria-live="polite">
+              <span>睡眠時間</span>
+              <strong id="sleepOut">8.0h</strong>
+            </div>
+          </div>
+
+          <div class="grid one">
+            <label class="field">
+              <span>服薬</span>
+              <select id="meds" name="meds">
+                <option value="done">予定通り</option>
+                <option value="partial">一部のみ</option>
+                <option value="missed">飲めなかった</option>
+                <option value="none">予定なし</option>
+              </select>
+            </label>
+          </div>
+
+          <fieldset class="check-block">
+            <legend>今日あったサイン</legend>
+            <div class="sign-group">
+              <h3>体調</h3>
+              <label class="sign-option"><input type="checkbox" name="signs" value="sleepDrop"><span class="sign-card" data-icon="Zz">睡眠減</span></label>
+              <label class="sign-option"><input type="checkbox" name="signs" value="bodyHeavy"><span class="sign-card" data-icon="体">体が重い</span></label>
+              <label class="sign-option"><input type="checkbox" name="signs" value="period"><span class="sign-card" data-icon="月">生理</span></label>
+              <label class="sign-option"><input type="checkbox" name="signs" value="dizzy"><span class="sign-card" data-icon="揺">めまい</span></label>
+              <label class="sign-option"><input type="checkbox" name="signs" value="headache"><span class="sign-card" data-icon="頭">頭痛</span></label>
+              <label class="sign-option"><input type="checkbox" name="signs" value="nausea"><span class="sign-card" data-icon="胃">吐き気</span></label>
+              <label class="sign-option"><input type="checkbox" name="signs" value="restless"><span class="sign-card" data-icon="波">そわそわ</span></label>
+              <label class="sign-option"><input type="checkbox" name="signs" value="racing"><span class="sign-card" data-icon="考">思考加速</span></label>
+            </div>
+            <div class="sign-group">
+              <h3>コミュニケーション</h3>
+              <label class="sign-option"><input type="checkbox" name="signs" value="talkative"><span class="sign-card" data-icon="話">連絡増</span></label>
+              <label class="sign-option"><input type="checkbox" name="signs" value="irritable"><span class="sign-card" data-icon="刺">衝突</span></label>
+              <label class="sign-option"><input type="checkbox" name="signs" value="withdrawal"><span class="sign-card" data-icon="閉">会話つらい</span></label>
+              <label class="sign-option"><input type="checkbox" name="signs" value="noReply"><span class="sign-card" data-icon="未">返信回避</span></label>
+            </div>
+            <div class="sign-group">
+              <h3>食事・生活</h3>
+              <label class="sign-option"><input type="checkbox" name="signs" value="lowAppetite"><span class="sign-card" data-icon="少">食欲なし</span></label>
+              <label class="sign-option"><input type="checkbox" name="signs" value="overeating"><span class="sign-card" data-icon="多">食べすぎ</span></label>
+              <label class="sign-option"><input type="checkbox" name="signs" value="skippedMeals"><span class="sign-card" data-icon="抜">食事抜き</span></label>
+              <label class="sign-option"><input type="checkbox" name="signs" value="caffeine"><span class="sign-card" data-icon="茶">カフェイン</span></label>
+              <label class="sign-option"><input type="checkbox" name="signs" value="alcohol"><span class="sign-card" data-icon="酒">飲酒</span></label>
+              <label class="sign-option"><input type="checkbox" name="signs" value="spending"><span class="sign-card" data-icon="過">過食</span></label>
+              <label class="sign-option"><input type="checkbox" name="signs" value="exercise"><span class="sign-card" data-icon="歩">運動</span></label>
+            </div>
+            <div class="sign-group">
+              <h3>安全</h3>
+              <label class="sign-option"><input type="checkbox" name="signs" value="hopeless"><span class="sign-card" data-icon="SOS">強い絶望感</span></label>
+            </div>
+          </fieldset>
+
+          <label class="field note-field">
+            <span>メモ</span>
+            <textarea id="note" name="note" rows="3" placeholder="きっかけ、体調、予定、相談したいことなど"></textarea>
+          </label>
+
+          <div class="actions">
+            <button class="primary" type="submit">保存</button>
+            <button class="ghost" id="clearToday" type="button">今日の入力を消す</button>
+          </div>
+        </form>
+
+        <aside class="panel insight">
+          <h2>今日の見立て</h2>
+          <div class="risk-card" id="riskCard">
+            <strong>記録すると表示されます</strong>
+            <p>睡眠、気分、サインをもとに注意ポイントを出します。</p>
+          </div>
+          <div class="mini-list" id="recentList"></div>
+        </aside>
+      </section>
+
+      <section class="view" id="trends">
+        <div class="panel">
+          <div class="section-head">
+            <div>
+              <h2>14日間の傾向</h2>
+              <p>上下の揺れと睡眠の変化を同じ画面で確認します。</p>
+            </div>
+            <button class="ghost" id="seedDemo" type="button">サンプル追加</button>
+          </div>
+          <canvas id="trendChart" width="1100" height="420" aria-label="14日間の気分と睡眠グラフ"></canvas>
+          <div class="summary-grid" id="summaryGrid"></div>
+        </div>
+      </section>
+
+      <section class="view" id="plan">
+        <div class="panel plan-grid">
+          <div>
+            <h2>セルフケア・プラン</h2>
+            <p>調子が動き始めた時に見る、短い行動リストです。</p>
+          </div>
+          <div class="plan-column">
+            <h3>上がりすぎのサイン</h3>
+            <ul>
+              <li>睡眠が2日以上短い</li>
+              <li>話す量・予定・買い物が急に増える</li>
+              <li>自分だけで大きな決断をしたくなる</li>
+            </ul>
+            <h3>先にやること</h3>
+            <ul>
+              <li>今夜の就寝時刻を固定する</li>
+              <li>予定を1つ減らす</li>
+              <li>主治医・家族・信頼できる人にログを見せる</li>
+            </ul>
+          </div>
+          <div class="plan-column">
+            <h3>下がりすぎのサイン</h3>
+            <ul>
+              <li>起床・食事・入浴が重い</li>
+              <li>人との連絡を避け続ける</li>
+              <li>絶望感や消えたい気持ちが強い</li>
+            </ul>
+            <h3>先にやること</h3>
+            <ul>
+              <li>最低限の予定を1つだけ選ぶ</li>
+              <li>水分・食事・服薬を確認する</li>
+              <li>危険を感じたら地域の救急・相談窓口につなぐ</li>
+            </ul>
+          </div>
+        </div>
+        <div class="notice">
+          このアプリは医療判断の代わりではありません。服薬変更や緊急時の判断は、主治医や地域の緊急窓口に相談してください。
+        </div>
+      </section>
+
+      <section class="view" id="data">
+        <div class="panel data-tools">
+          <h2>データ管理</h2>
+          <p>この端末のブラウザ内だけに保存されます。</p>
+          <div class="actions">
+            <button class="primary" id="exportJson" type="button">JSONを書き出す</button>
+            <button class="ghost" id="exportCsv" type="button">CSVを書き出す</button>
+            <label class="file-button">
+              読み込む
+              <input id="importFile" type="file" accept="application/json">
+            </label>
+            <button class="danger" id="deleteAll" type="button">全削除</button>
+          </div>
+          <pre id="dataPreview" aria-label="保存データのプレビュー"></pre>
+        </div>
+      </section>
+    </main>
+
+    <script src="app.js"></script>
+  </body>
+</html>
