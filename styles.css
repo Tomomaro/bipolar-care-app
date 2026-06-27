@@ -1,17 +1,17 @@
 :root {
   color-scheme: light;
-  --bg: #fbf7f1;
-  --surface: #fffdf9;
-  --ink: #2b2926;
-  --muted: #756f67;
-  --line: #eadfd2;
-  --accent: #5e8f83;
-  --accent-2: #d08b68;
-  --soft: #eef5ee;
-  --soft-2: #f8efe7;
-  --warn: #f6dec8;
+  --bg: #fdf8f2;
+  --surface: #fffdfa;
+  --ink: #2d2924;
+  --muted: #7b746b;
+  --line: #efe2d4;
+  --accent: #6f9a8a;
+  --accent-2: #d59a7b;
+  --soft: #f0f7f1;
+  --soft-2: #fbf0e8;
+  --warn: #f8e4d2;
   --danger: #b83d3d;
-  --shadow: 0 16px 34px rgba(94, 74, 50, 0.09);
+  --shadow: 0 14px 30px rgba(106, 86, 64, 0.075);
 }
 
 * {
@@ -21,8 +21,9 @@
 body {
   margin: 0;
   background:
-    radial-gradient(circle at top left, rgba(248, 225, 201, 0.72), transparent 320px),
-    linear-gradient(180deg, #fbf7f1 0%, #f6f5ee 100%);
+    radial-gradient(circle at top left, rgba(250, 228, 207, 0.78), transparent 330px),
+    radial-gradient(circle at top right, rgba(221, 239, 229, 0.72), transparent 300px),
+    linear-gradient(180deg, #fdf8f2 0%, #f8f6ee 100%);
   color: var(--ink);
   font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Yu Gothic", "Segoe UI", sans-serif;
   line-height: 1.55;
@@ -41,7 +42,7 @@ button {
 
 .topbar {
   align-items: center;
-  background: linear-gradient(135deg, #f2d8c5 0%, #d7ebe1 100%);
+  background: linear-gradient(135deg, #f6dfcf 0%, #dcefe7 100%);
   color: var(--ink);
   display: flex;
   justify-content: space-between;
@@ -192,6 +193,11 @@ h3 {
   color: #384147;
   font-size: 0.92rem;
   font-weight: 700;
+}
+
+.field input::placeholder,
+textarea::placeholder {
+  color: #b1a79b;
 }
 
 input,
@@ -470,6 +476,66 @@ output {
   margin-bottom: 18px;
 }
 
+.tag-block {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  margin: 0 0 14px;
+  padding: 12px;
+}
+
+.tag-block legend {
+  color: #384147;
+  font-size: 0.92rem;
+  font-weight: 700;
+}
+
+.tag-options,
+.tag-filter,
+.tag-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.tag-option {
+  display: inline-flex;
+}
+
+.tag-option input {
+  inline-size: 1px;
+  block-size: 1px;
+  opacity: 0;
+  position: absolute;
+}
+
+.tag-option span,
+.tag-filter button,
+.tag-row span {
+  background: #fffdf9;
+  border: 1px solid #e4d8ca;
+  border-radius: 999px;
+  color: #4e4b45;
+  display: inline-flex;
+  font-size: 0.82rem;
+  font-weight: 700;
+  line-height: 1.2;
+  padding: 8px 11px;
+}
+
+.tag-option input:checked + span,
+.tag-filter button.is-active {
+  background: #edf6f1;
+  border-color: #78aa9e;
+  color: #315e55;
+  box-shadow: inset 0 0 0 2px rgba(107, 156, 145, 0.16);
+}
+
+.tag-option input:focus-visible + span,
+.tag-filter button:focus-visible {
+  outline: 3px solid rgba(208, 139, 104, 0.34);
+  outline-offset: 2px;
+}
+
 .actions {
   display: flex;
   flex-wrap: wrap;
@@ -536,6 +602,23 @@ output {
   margin: 8px 0 0;
 }
 
+.reason-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 12px;
+}
+
+.reason-list span {
+  background: rgba(255, 253, 250, 0.78);
+  border: 1px solid rgba(111, 154, 138, 0.28);
+  border-radius: 999px;
+  color: #41685e;
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 4px 8px;
+}
+
 .mini-list {
   display: grid;
   gap: 10px;
@@ -591,7 +674,7 @@ output {
 
 .plan-grid {
   display: grid;
-  gap: 24px;
+  gap: 20px;
   grid-template-columns: 1fr 1fr 1fr;
 }
 
@@ -617,6 +700,52 @@ output {
   overflow: auto;
   padding: 16px;
   white-space: pre-wrap;
+}
+
+.tag-filter {
+  border-top: 1px solid var(--line);
+  margin-top: 16px;
+  padding-top: 16px;
+}
+
+.tag-filter button {
+  cursor: pointer;
+}
+
+.filtered-log {
+  display: grid;
+  gap: 10px;
+  margin: 14px 0;
+}
+
+.filtered-empty,
+.log-card {
+  background: #fffaf4;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 12px;
+}
+
+.log-card {
+  display: grid;
+  gap: 8px;
+}
+
+.log-card div:first-child {
+  align-items: baseline;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: space-between;
+}
+
+.log-card small,
+.filtered-empty {
+  color: var(--muted);
+}
+
+.log-card p {
+  margin: 0;
 }
 
 @media (max-width: 1120px) {
