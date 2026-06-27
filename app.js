@@ -1,6 +1,11 @@
 const STORAGE_KEY = "bipolar-care-log-v1";
+const removedDemoNote = "\u30b5\u30f3\u30d7\u30eb\u8a18\u9332";
 const signLabels = {
-  sleepDrop: "睡眠減少",
+  sleepDrop: "睡眠の乱れ",
+  sleepy: "眠気",
+  hardToSleep: "入眠しにくい",
+  nightWaking: "中途覚醒",
+  earlyWaking: "早朝覚醒",
   bodyHeavy: "体が重い",
   period: "生理",
   dizzy: "めまい",
@@ -8,6 +13,8 @@ const signLabels = {
   nausea: "吐き気",
   restless: "そわそわ",
   racing: "思考加速",
+  anxious: "不安",
+  foggy: "ぼんやり",
   talkative: "連絡増加",
   irritable: "イライラ",
   noReply: "連絡回避",
@@ -43,8 +50,11 @@ const todayStatus = document.querySelector("#todayStatus");
 const trendChart = document.querySelector("#trendChart");
 const summaryGrid = document.querySelector("#summaryGrid");
 const dataPreview = document.querySelector("#dataPreview");
+const tagFilterBar = document.querySelector("#tagFilterBar");
+const filteredLog = document.querySelector("#filteredLog");
 
 let entries = loadEntries();
+let activeDoctorTag = "all";
 saveEntries();
 
 function isoToday() {
@@ -73,6 +83,7 @@ function sortedEntries() {
 function normalizeEntries(items) {
   return items
     .filter((item) => item && typeof item.date === "string")
+    .filter((item) => item.note !== removedDemoNote)
     .map((item) => {
       const bedtimeValue = roundTimeValue(item.bedtime || "23:00");
       const fallbackWakeTime = wakeTimeFromSleep(bedtimeValue, item.sleep ?? 8);
@@ -86,9 +97,51 @@ function normalizeEntries(items) {
         meds: item.meds || "done",
         stress: item.stress || "none",
         signs: Array.isArray(item.signs) ? item.signs : [],
+        events: normalizeTags(item.events),
+        steps: normalizeSteps(item.steps),
+        doctorTags: normalizeTags(item.doctorTags),
         note: item.note || ""
       };
     });
+}
+
+function normalizeSteps(value) {
+  const steps = Number(value);
+  return Number.isFinite(steps) && steps > 0 ? Math.round(steps) : "";
+}
+
+function normalizeTags(value) {
+  if (Array.isArray(value)) return value.map((item) => String(item).trim()).filter(Boolean);
+  if (!value) return [];
+  return String(value).split(/[、,\s]+/).map((item) => item.trim()).filter(Boolean);
+}
+
+function tagsToInput(tags) {
+  return Array.isArray(tags) ? tags.join("、") : "";
+}
+
+function escapeHtml(value) {
+  return String(value).replace(/[&<>"']/g, (char) => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#39;"
+  }[char]));
+}
+
+function escapeAttr(value) {
+  return escapeHtml(value);
+}
+
+function allDoctorTags() {
+  return [...new Set(entries.flatMap((entry) => entry.doctorTags || []))].sort((a, b) => a.localeCompare(b, "ja"));
+}
+
+function filteredEntries() {
+  const sorted = sortedEntries();
+  if (activeDoctorTag === "all") return sorted;
+  return sorted.filter((entry) => (entry.doctorTags || []).includes(activeDoctorTag));
 }
 
 function timeToMinutes(value) {
@@ -185,9 +238,14 @@ function fillForm(entry) {
   wakeTime.value = entry?.wakeTime || wakeTimeFromSleep(bedtime.value, entry?.sleep ?? 8);
   document.querySelector("#meds").value = entry?.meds || "done";
   document.querySelector("#stress").value = entry?.stress || "none";
+  document.querySelector("#events").value = tagsToInput(entry?.events);
+  document.querySelector("#steps").value = entry?.steps || "";
   document.querySelector("#note").value = entry?.note || "";
   document.querySelectorAll("input[name='signs']").forEach((box) => {
     box.checked = Boolean(entry?.signs?.includes(box.value));
+  });
+  document.querySelectorAll("input[name='doctorTags']").forEach((box) => {
+    box.checked = Boolean(entry?.doctorTags?.includes(box.value));
   });
   updateCalculatedFields();
 }
@@ -202,39 +260,82 @@ function getRisk(entry) {
   }
 
   const signs = new Set(entry.signs || []);
-  const lowSleep = Number(entry.sleep) <= 4.5;
-  const highMood = Number(entry.mood) >= 4;
-  const lowMood = Number(entry.mood) <= -4;
-  const missedMeds = entry.meds === "missed";
+  const reasons = [];
+  let upScore = 0;
+  let downScore = 0;
+  let careScore = 0;
+
+  const lowSleep = Number(entry.sleep) <= 5;
+  const veryLowSleep = Number(entry.sleep) <= 4;
+  const longSleep = Number(entry.sleep) >= 10;
+  const highMood = Number(entry.mood) >= 3;
+  const veryHighMood = Number(entry.mood) >= 4;
+  const lowMood = Number(entry.mood) <= -3;
+  const veryLowMood = Number(entry.mood) <= -4;
+  const missedMeds = entry.meds === "missed" || entry.meds === "partial";
+  const externalLoad = (entry.events || []).length > 0;
+  const highSteps = Number(entry.steps) >= 12000;
+  const veryHighSteps = Number(entry.steps) >= 16000;
 
   if (signs.has("hopeless")) {
     return {
       level: "danger",
       title: "緊急度が高いサインがあります",
-      body: "一人で抱えず、今すぐ信頼できる人・主治医・地域の救急相談につなげてください。"
+      body: "一人で抱えず、今すぐ信頼できる人・主治医・地域の救急相談につなげてください。",
+      reasons: ["強い絶望感"]
     };
   }
 
-  if ((lowSleep && highMood) || missedMeds || signs.has("racing") || signs.has("talkative") || signs.has("restless")) {
+  if (veryHighMood) { upScore += 2; reasons.push("気分がかなり高め"); }
+  else if (highMood) { upScore += 1; reasons.push("気分が高め"); }
+  if (veryLowMood) { downScore += 2; reasons.push("気分がかなり低め"); }
+  else if (lowMood) { downScore += 1; reasons.push("気分が低め"); }
+  if (veryLowSleep) { upScore += 2; careScore += 1; reasons.push("睡眠が短い"); }
+  else if (lowSleep) { upScore += 1; reasons.push("睡眠が少なめ"); }
+  if (longSleep || signs.has("sleepy")) { downScore += 1; reasons.push("眠気・睡眠多め"); }
+  if (signs.has("hardToSleep") || signs.has("nightWaking") || signs.has("earlyWaking") || signs.has("sleepDrop")) { upScore += 1; reasons.push("睡眠の乱れ"); }
+  if (signs.has("racing") || signs.has("restless") || signs.has("talkative")) { upScore += 2; reasons.push("上がりやすいサイン"); }
+  if (signs.has("caffeine") || signs.has("alcohol")) { upScore += 1; reasons.push("刺激になる要因"); }
+  if (signs.has("withdrawal") || signs.has("noReply") || signs.has("bodyHeavy") || signs.has("foggy")) { downScore += 2; reasons.push("下がりやすいサイン"); }
+  if (signs.has("lowAppetite") || signs.has("skippedMeals") || signs.has("dizzy") || signs.has("headache") || signs.has("nausea")) { careScore += 1; reasons.push("体調ケアが必要"); }
+  if (missedMeds) { careScore += 2; reasons.push("服薬の乱れ"); }
+  if (entry.stress === "high") { upScore += 1; downScore += 1; reasons.push("ストレス高め"); }
+  if (externalLoad) { careScore += 1; reasons.push("イベントあり"); }
+  if (veryHighSteps) { upScore += 1; careScore += 1; reasons.push("歩き過ぎ"); }
+  else if (highSteps) { careScore += 1; reasons.push("歩数多め"); }
+
+  if (upScore >= 4 || (upScore >= 3 && lowSleep)) {
     return {
       level: "warn",
       title: "上がりすぎに注意",
-      body: "睡眠確保、予定の圧縮、重要な決断の保留を優先すると振れ幅を小さくしやすいです。"
+      body: "睡眠確保、予定の圧縮、刺激を減らすことを優先しましょう。大きな決断は明日以降に回すのがおすすめです。",
+      reasons
     };
   }
 
-  if (lowMood || signs.has("withdrawal") || signs.has("noReply") || signs.has("bodyHeavy") || signs.has("lowAppetite") || signs.has("skippedMeals") || signs.has("dizzy")) {
+  if (downScore >= 4 || (downScore >= 3 && careScore >= 1)) {
     return {
       level: "warn",
       title: "下がりすぎに注意",
-      body: "小さな予定を1つだけ残し、食事・水分・服薬の確認から始めてください。"
+      body: "小さな予定を1つだけ残し、食事・水分・服薬・連絡先の確認から始めましょう。",
+      reasons
+    };
+  }
+
+  if (careScore >= 2 || reasons.length >= 3) {
+    return {
+      level: "steady",
+      title: "体調の揺れを見守りたい日です",
+      body: "大きな警戒ではありませんが、睡眠・食事・服薬とイベントの影響をメモしておくと通院時に説明しやすいです。",
+      reasons
     };
   }
 
   return {
     level: "steady",
     title: "大きな警戒サインは少なめです",
-    body: "睡眠と服薬のリズムを保ち、気になる変化はメモしておきましょう。"
+    body: "睡眠と服薬のリズムを保ち、気になる変化はメモしておきましょう。",
+    reasons
   };
 }
 
@@ -242,7 +343,10 @@ function renderRisk() {
   const today = entryFor(isoToday());
   const risk = getRisk(today);
   riskCard.className = `risk-card ${risk.level === "steady" || risk.level === "empty" ? "" : risk.level}`;
-  riskCard.innerHTML = `<strong>${risk.title}</strong><p>${risk.body}</p>`;
+  const reasonList = risk.reasons?.length
+    ? `<div class="reason-list">${[...new Set(risk.reasons)].slice(0, 5).map((reason) => `<span>${reason}</span>`).join("")}</div>`
+    : "";
+  riskCard.innerHTML = `<strong>${risk.title}</strong><p>${risk.body}</p>${reasonList}`;
   todayStatus.textContent = today ? `気分 ${today.mood} / 睡眠 ${today.sleep}h` : "未記録";
 }
 
@@ -255,7 +359,10 @@ function renderRecent() {
 
   recentList.innerHTML = recent.map((entry) => {
     const signs = entry.signs.length ? entry.signs.map((sign) => signLabels[sign]).join("、") : "サインなし";
-    return `<div class="mini-item"><strong>${entry.date}</strong><span>気分 ${entry.mood} / 睡眠 ${entry.sleep}h / ${signs}</span></div>`;
+    const tags = [...(entry.events || []), ...(entry.doctorTags || [])].slice(0, 3);
+    const tagText = tags.length ? ` / ${tags.join("、")}` : "";
+    const stepText = entry.steps ? ` / ${entry.steps}歩` : "";
+    return `<div class="mini-item"><strong>${entry.date}</strong><span>気分 ${entry.mood} / 睡眠 ${entry.sleep}h${stepText} / ${signs}${tagText}</span></div>`;
   }).join("");
 }
 
@@ -354,7 +461,31 @@ function drawChart() {
 }
 
 function renderDataPreview() {
-  dataPreview.textContent = JSON.stringify(sortedEntries(), null, 2);
+  const items = filteredEntries();
+  dataPreview.textContent = JSON.stringify(items, null, 2);
+}
+
+function renderTagFilter() {
+  const tags = allDoctorTags();
+  const buttons = [
+    `<button class="${activeDoctorTag === "all" ? "is-active" : ""}" data-tag="all" type="button">すべて</button>`,
+    ...tags.map((tag) => `<button class="${activeDoctorTag === tag ? "is-active" : ""}" data-tag="${escapeAttr(tag)}" type="button">${escapeHtml(tag)}</button>`)
+  ];
+  tagFilterBar.innerHTML = buttons.join("");
+}
+
+function renderFilteredLog() {
+  const items = filteredEntries();
+  if (!items.length) {
+    filteredLog.innerHTML = '<div class="filtered-empty">このタグの記録はまだありません。</div>';
+    return;
+  }
+
+  filteredLog.innerHTML = items.slice(0, 8).map((entry) => {
+    const tags = (entry.doctorTags || []).map((tag) => `<span>${escapeHtml(tag)}</span>`).join("");
+    const note = entry.note ? `<p>${escapeHtml(entry.note)}</p>` : "";
+    return `<article class="log-card"><div><strong>${escapeHtml(entry.date)}</strong><small>気分 ${entry.mood} / 睡眠 ${entry.sleep}h</small></div><div class="tag-row">${tags}</div>${note}</article>`;
+  }).join("");
 }
 
 function renderAll() {
@@ -362,6 +493,8 @@ function renderAll() {
   renderRecent();
   renderSummary();
   drawChart();
+  renderTagFilter();
+  renderFilteredLog();
   renderDataPreview();
 }
 
@@ -376,7 +509,7 @@ function download(name, content, type) {
 }
 
 function toCsv() {
-  const rows = [["date", "mood", "bedtime", "wakeTime", "sleep", "meds", "stress", "signs", "note"]];
+  const rows = [["date", "mood", "bedtime", "wakeTime", "sleep", "meds", "stress", "steps", "signs", "events", "doctorTags", "note"]];
   sortedEntries().reverse().forEach((entry) => {
     rows.push([
       entry.date,
@@ -386,36 +519,14 @@ function toCsv() {
       entry.sleep,
       entry.meds,
       entry.stress,
+      entry.steps || "",
       entry.signs.join("|"),
+      (entry.events || []).join("|"),
+      (entry.doctorTags || []).join("|"),
       entry.note.replace(/\n/g, " ")
     ]);
   });
   return rows.map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(",")).join("\n");
-}
-
-function addDemoData() {
-  const base = new Date(`${isoToday()}T00:00:00`);
-  const demo = Array.from({ length: 10 }, (_, index) => {
-    const date = new Date(base);
-    date.setDate(base.getDate() - (9 - index));
-    const moodValue = [-1, -2, -1, 0, 1, 3, 4, 2, 0, -1][index];
-    const sleepValue = [7.5, 8, 7, 6.5, 6, 4.5, 4, 5.5, 7, 7.5][index];
-    return {
-      date: date.toISOString().slice(0, 10),
-      mood: moodValue,
-      bedtime: "23:00",
-      wakeTime: wakeTimeFromSleep("23:00", sleepValue),
-      sleep: sleepValue,
-      meds: index === 6 ? "partial" : "done",
-      stress: index > 4 && index < 7 ? "high" : "none",
-      signs: index === 6 ? ["sleepDrop", "racing", "talkative", "caffeine"] : index === 1 ? ["bodyHeavy", "lowAppetite", "dizzy", "exercise"] : [],
-      note: "サンプル記録"
-    };
-  });
-  entries = [...entries.filter((entry) => !demo.some((item) => item.date === entry.date)), ...demo];
-  saveEntries();
-  fillForm(entryFor(entryDate.value));
-  renderAll();
 }
 
 tabs.forEach((tab) => {
@@ -455,6 +566,9 @@ form.addEventListener("submit", (event) => {
     meds: data.get("meds"),
     stress: data.get("stress"),
     signs: data.getAll("signs"),
+    events: normalizeTags(data.get("events")),
+    steps: normalizeSteps(data.get("steps")),
+    doctorTags: data.getAll("doctorTags"),
     note: data.get("note").trim()
   };
   entries = [...entries.filter((item) => item.date !== entry.date), entry];
@@ -466,7 +580,14 @@ document.querySelector("#clearToday").addEventListener("click", () => {
   fillForm({ date: entryDate.value });
 });
 
-document.querySelector("#seedDemo").addEventListener("click", addDemoData);
+tagFilterBar.addEventListener("click", (event) => {
+  const button = event.target.closest("button[data-tag]");
+  if (!button) return;
+  activeDoctorTag = button.dataset.tag;
+  renderTagFilter();
+  renderFilteredLog();
+  renderDataPreview();
+});
 
 document.querySelector("#exportJson").addEventListener("click", () => {
   download("bipolar-care-log.json", JSON.stringify(sortedEntries(), null, 2), "application/json");
