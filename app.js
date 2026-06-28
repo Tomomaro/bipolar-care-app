@@ -1,4 +1,5 @@
 const STORAGE_KEY = "bipolar-care-log-v1";
+const SETTINGS_KEY = "bipolar-care-settings-v1";
 const removedDemoNote = "\u30b5\u30f3\u30d7\u30eb\u8a18\u9332";
 const signLabels = {
   sleepDrop: "睡眠の乱れ",
@@ -52,9 +53,21 @@ const summaryGrid = document.querySelector("#summaryGrid");
 const dataPreview = document.querySelector("#dataPreview");
 const tagFilterBar = document.querySelector("#tagFilterBar");
 const filteredLog = document.querySelector("#filteredLog");
+const saveToast = document.querySelector("#saveToast");
+const settingsOpen = document.querySelector("#settingsOpen");
+const settingsClose = document.querySelector("#settingsClose");
+const settingsModal = document.querySelector("#settingsModal");
+const reminderEnabled = document.querySelector("#reminderEnabled");
+const reminderTime = document.querySelector("#reminderTime");
+const reminderStatus = document.querySelector("#reminderStatus");
+const saveSettings = document.querySelector("#saveSettings");
+const testReminder = document.querySelector("#testReminder");
+const showStepsTrend = document.querySelector("#showStepsTrend");
 
 let entries = loadEntries();
 let activeDoctorTag = "all";
+let settings = loadSettings();
+let reminderTimer = null;
 saveEntries();
 
 function isoToday() {
@@ -74,6 +87,30 @@ function loadEntries() {
 function saveEntries() {
   entries = normalizeEntries(entries);
   localStorage.setItem(STORAGE_KEY, JSON.stringify(entries));
+}
+
+function loadSettings() {
+  try {
+    return {
+      reminderEnabled: false,
+      reminderTime: "21:00",
+      ...(JSON.parse(localStorage.getItem(SETTINGS_KEY)) || {})
+    };
+  } catch {
+    return { reminderEnabled: false, reminderTime: "21:00" };
+  }
+}
+
+function saveAppSettings() {
+  localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+}
+
+function registerServiceWorker() {
+  if (!("serviceWorker" in navigator)) return;
+  if (!["http:", "https:"].includes(window.location.protocol)) return;
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("sw.js").catch(() => {});
+  });
 }
 
 function sortedEntries() {
@@ -142,6 +179,73 @@ function filteredEntries() {
   const sorted = sortedEntries();
   if (activeDoctorTag === "all") return sorted;
   return sorted.filter((entry) => (entry.doctorTags || []).includes(activeDoctorTag));
+}
+
+function showToast(message = "保存しました") {
+  saveToast.textContent = message;
+  saveToast.classList.add("is-visible");
+  window.setTimeout(() => saveToast.classList.remove("is-visible"), 2200);
+}
+
+function notificationSupported() {
+  return "Notification" in window;
+}
+
+function updateReminderStatus(message) {
+  if (message) {
+    reminderStatus.textContent = message;
+    return;
+  }
+  if (!notificationSupported()) {
+    reminderStatus.textContent = "このブラウザでは通知に対応していません。";
+  } else if (Notification.permission === "granted") {
+    reminderStatus.textContent = settings.reminderEnabled
+      ? `${settings.reminderTime} に記録リマインダーを出します。`
+      : "通知はオフです。";
+  } else if (Notification.permission === "denied") {
+    reminderStatus.textContent = "通知がブロックされています。ブラウザの設定から許可できます。";
+  } else {
+    reminderStatus.textContent = "通知をオンにすると、ブラウザから許可を求められます。";
+  }
+}
+
+function minutesUntilReminder(timeValue) {
+  const [hours, minutes] = (timeValue || "21:00").split(":").map(Number);
+  const now = new Date();
+  const next = new Date(now);
+  next.setHours(hours || 21, minutes || 0, 0, 0);
+  if (next <= now) next.setDate(next.getDate() + 1);
+  return next.getTime() - now.getTime();
+}
+
+function sendReminderNotification() {
+  if (!settings.reminderEnabled || !notificationSupported() || Notification.permission !== "granted") return;
+  new Notification("体調ログの時間です", {
+    body: "今日の気分、睡眠、サインを少しだけ記録しましょう。"
+  });
+}
+
+function scheduleReminder() {
+  if (reminderTimer) window.clearTimeout(reminderTimer);
+  reminderTimer = null;
+  if (!settings.reminderEnabled || !notificationSupported() || Notification.permission !== "granted") return;
+  reminderTimer = window.setTimeout(() => {
+    sendReminderNotification();
+    scheduleReminder();
+  }, minutesUntilReminder(settings.reminderTime));
+}
+
+function openSettings() {
+  reminderEnabled.checked = Boolean(settings.reminderEnabled);
+  reminderTime.value = settings.reminderTime || "21:00";
+  updateReminderStatus();
+  settingsModal.classList.add("is-open");
+  settingsModal.setAttribute("aria-hidden", "false");
+}
+
+function closeSettings() {
+  settingsModal.classList.remove("is-open");
+  settingsModal.setAttribute("aria-hidden", "true");
 }
 
 function timeToMinutes(value) {
@@ -370,13 +474,22 @@ function renderSummary() {
   const recent = sortedEntries().slice(0, 14);
   const average = (key) => {
     if (!recent.length) return "-";
-    return (recent.reduce((sum, item) => sum + Number(item[key]), 0) / recent.length).toFixed(1);
+    const values = recent.map((item) => Number(item[key])).filter((value) => Number.isFinite(value));
+    if (!values.length) return "-";
+    return (values.reduce((sum, value) => sum + value, 0) / values.length).toFixed(1);
+  };
+  const positiveAverage = (key) => {
+    const values = recent.map((item) => Number(item[key])).filter((value) => Number.isFinite(value) && value > 0);
+    if (!values.length) return "-";
+    return (values.reduce((sum, value) => sum + value, 0) / values.length).toFixed(1);
   };
   const signCount = recent.reduce((sum, item) => sum + item.signs.length, 0);
   const missed = recent.filter((item) => item.meds === "missed" || item.meds === "partial").length;
+  const averageSteps = positiveAverage("steps");
   summaryGrid.innerHTML = [
     ["平均気分", average("mood")],
     ["平均睡眠", `${average("sleep")}h`],
+    ["平均歩数", averageSteps === "-" ? "-" : `${Math.round(Number(averageSteps)).toLocaleString()}歩`],
     ["サイン数", signCount],
     ["服薬の乱れ", missed]
   ].map(([label, value]) => `<div class="summary-card"><span>${label}</span><b>${value}</b></div>`).join("");
@@ -417,6 +530,7 @@ function drawChart() {
   const xFor = (index) => pad.left + (recent.length === 1 ? chartW / 2 : (chartW / (recent.length - 1)) * index);
   const yMood = (value) => pad.top + chartH - ((Number(value) + 5) / 10) * chartH;
   const ySleep = (value) => pad.top + chartH - (Math.min(Number(value), 12) / 12) * chartH;
+  const ySteps = (value) => pad.top + chartH - (Math.min(Number(value), 20000) / 20000) * chartH;
 
   recent.forEach((entry, index) => {
     const x = xFor(index);
@@ -430,6 +544,36 @@ function drawChart() {
     ctx.fillText(entry.date.slice(5), 0, 0);
     ctx.restore();
   });
+
+  if (showStepsTrend.checked && recent.some((entry) => Number(entry.steps) > 0)) {
+    ctx.strokeStyle = "#4f86a8";
+    ctx.lineWidth = 3;
+    ctx.setLineDash([7, 6]);
+    ctx.beginPath();
+    let hasPoint = false;
+    recent.forEach((entry, index) => {
+      if (!Number(entry.steps)) return;
+      const x = xFor(index);
+      const y = ySteps(entry.steps);
+      if (!hasPoint) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+      hasPoint = true;
+    });
+    ctx.stroke();
+    ctx.setLineDash([]);
+    recent.forEach((entry, index) => {
+      if (!Number(entry.steps)) return;
+      const x = xFor(index);
+      const y = ySteps(entry.steps);
+      ctx.fillStyle = "#ffffff";
+      ctx.strokeStyle = "#4f86a8";
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.arc(x, y, 6, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+    });
+  }
 
   ctx.strokeStyle = "#a34e34";
   ctx.lineWidth = 4;
@@ -458,6 +602,10 @@ function drawChart() {
   ctx.fillText("線: 気分 -5から+5", pad.left, 24);
   ctx.fillStyle = "#246b61";
   ctx.fillText("棒: 睡眠 0から12h", pad.left + 190, 24);
+  if (showStepsTrend.checked) {
+    ctx.fillStyle = "#4f86a8";
+    ctx.fillText("点線: 歩数 0から20000歩", pad.left + 360, 24);
+  }
 }
 
 function renderDataPreview() {
@@ -574,6 +722,7 @@ form.addEventListener("submit", (event) => {
   entries = [...entries.filter((item) => item.date !== entry.date), entry];
   saveEntries();
   renderAll();
+  showToast("保存しました");
 });
 
 document.querySelector("#clearToday").addEventListener("click", () => {
@@ -587,6 +736,47 @@ tagFilterBar.addEventListener("click", (event) => {
   renderTagFilter();
   renderFilteredLog();
   renderDataPreview();
+});
+
+showStepsTrend.addEventListener("change", drawChart);
+
+settingsOpen.addEventListener("click", openSettings);
+settingsClose.addEventListener("click", closeSettings);
+settingsModal.addEventListener("click", (event) => {
+  if (event.target === settingsModal) closeSettings();
+});
+
+saveSettings.addEventListener("click", async () => {
+  settings = {
+    ...settings,
+    reminderEnabled: reminderEnabled.checked,
+    reminderTime: roundTimeValue(reminderTime.value || "21:00")
+  };
+  reminderTime.value = settings.reminderTime;
+
+  if (settings.reminderEnabled && notificationSupported() && Notification.permission === "default") {
+    const permission = await Notification.requestPermission();
+    if (permission !== "granted") settings.reminderEnabled = false;
+  }
+
+  saveAppSettings();
+  scheduleReminder();
+  updateReminderStatus(settings.reminderEnabled ? "リマインダーを保存しました。" : "リマインダーをオフにしました。");
+  showToast("設定を保存しました");
+});
+
+testReminder.addEventListener("click", async () => {
+  if (!notificationSupported()) {
+    updateReminderStatus("このブラウザでは通知に対応していません。");
+    return;
+  }
+  if (Notification.permission === "default") await Notification.requestPermission();
+  if (Notification.permission === "granted") {
+    new Notification("通知テスト", { body: "このように記録リマインダーが届きます。" });
+    updateReminderStatus("通知テストを送信しました。");
+  } else {
+    updateReminderStatus("通知が許可されていません。");
+  }
 });
 
 document.querySelector("#exportJson").addEventListener("click", () => {
@@ -617,6 +807,11 @@ document.querySelector("#deleteAll").addEventListener("click", () => {
 });
 
 entryDate.value = isoToday();
+registerServiceWorker();
 populateTimeSelects();
 fillForm(entryFor(isoToday()));
+reminderEnabled.checked = Boolean(settings.reminderEnabled);
+reminderTime.value = settings.reminderTime || "21:00";
+scheduleReminder();
+updateReminderStatus();
 renderAll();

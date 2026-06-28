@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="双極症 体調ログ">
+  <rect width="512" height="512" rx="112" fill="#fdf8f2"/>
+  <circle cx="256" cy="256" r="174" fill="#edf6f1" stroke="#6f9a8a" stroke-width="18"/>
+  <path d="M151 279c26 51 64 76 106 76s79-25 104-76" fill="none" stroke="#d59a7b" stroke-width="28" stroke-linecap="round"/>
+  <path d="M165 228c29-58 60-87 93-87 34 0 65 29 94 87" fill="none" stroke="#6f9a8a" stroke-width="28" stroke-linecap="round"/>
+  <circle cx="202" cy="246" r="18" fill="#2d2924"/>
+  <circle cx="310" cy="246" r="18" fill="#2d2924"/>
+  <path d="M256 92v48M256 372v48M92 256h48M372 256h48" stroke="#d59a7b" stroke-width="18" stroke-linecap="round"/>
+</svg>

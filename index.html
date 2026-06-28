@@ -3,7 +3,14 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#6f9a8a">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="体調ログ">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <title>双極症 体調ログ</title>
+    <link rel="manifest" href="manifest.webmanifest">
+    <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+    <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
     <link rel="stylesheet" href="styles.css">
   </head>
   <body>
@@ -12,7 +19,10 @@
         <p class="eyebrow">Daily Rhythm Tracker</p>
         <h1>双極症 体調ログ</h1>
       </div>
-      <div class="status-pill" id="todayStatus">未記録</div>
+      <div class="top-actions">
+        <button class="icon-button" id="settingsOpen" type="button" aria-label="設定を開く">⚙</button>
+        <div class="status-pill" id="todayStatus">未記録</div>
+      </div>
     </header>
 
     <main class="shell">
@@ -103,46 +113,46 @@
             <legend>今日あったサイン</legend>
             <div class="sign-group">
               <h3>睡眠</h3>
-              <label class="sign-option"><input type="checkbox" name="signs" value="sleepy"><span class="sign-card" data-icon="眠">眠気</span></label>
-              <label class="sign-option"><input type="checkbox" name="signs" value="hardToSleep"><span class="sign-card" data-icon="入">入眠しにくい</span></label>
-              <label class="sign-option"><input type="checkbox" name="signs" value="nightWaking"><span class="sign-card" data-icon="夜">中途覚醒</span></label>
-              <label class="sign-option"><input type="checkbox" name="signs" value="earlyWaking"><span class="sign-card" data-icon="朝">早朝覚醒</span></label>
+              <label class="sign-option"><input type="checkbox" name="signs" value="sleepy"><span class="sign-card" data-icon="💤">眠気</span></label>
+              <label class="sign-option"><input type="checkbox" name="signs" value="hardToSleep"><span class="sign-card" data-icon="🌙">入眠しにくい</span></label>
+              <label class="sign-option"><input type="checkbox" name="signs" value="nightWaking"><span class="sign-card" data-icon="🕯️">中途覚醒</span></label>
+              <label class="sign-option"><input type="checkbox" name="signs" value="earlyWaking"><span class="sign-card" data-icon="🌅">早朝覚醒</span></label>
             </div>
             <div class="sign-group">
               <h3>体調</h3>
-              <label class="sign-option"><input type="checkbox" name="signs" value="bodyHeavy"><span class="sign-card" data-icon="体">体が重い</span></label>
-              <label class="sign-option"><input type="checkbox" name="signs" value="period"><span class="sign-card" data-icon="月">生理</span></label>
-              <label class="sign-option"><input type="checkbox" name="signs" value="dizzy"><span class="sign-card" data-icon="揺">めまい</span></label>
-              <label class="sign-option"><input type="checkbox" name="signs" value="headache"><span class="sign-card" data-icon="頭">頭痛</span></label>
-              <label class="sign-option"><input type="checkbox" name="signs" value="nausea"><span class="sign-card" data-icon="胃">吐き気</span></label>
+              <label class="sign-option"><input type="checkbox" name="signs" value="bodyHeavy"><span class="sign-card" data-icon="🪨">体が重い</span></label>
+              <label class="sign-option"><input type="checkbox" name="signs" value="period"><span class="sign-card" data-icon="🌕">生理</span></label>
+              <label class="sign-option"><input type="checkbox" name="signs" value="dizzy"><span class="sign-card" data-icon="🌀">めまい</span></label>
+              <label class="sign-option"><input type="checkbox" name="signs" value="headache"><span class="sign-card" data-icon="⚡">頭痛</span></label>
+              <label class="sign-option"><input type="checkbox" name="signs" value="nausea"><span class="sign-card" data-icon="🌿">吐き気</span></label>
             </div>
             <div class="sign-group">
               <h3>メンタル</h3>
-              <label class="sign-option"><input type="checkbox" name="signs" value="restless"><span class="sign-card" data-icon="波">そわそわ</span></label>
-              <label class="sign-option"><input type="checkbox" name="signs" value="racing"><span class="sign-card" data-icon="考">思考加速</span></label>
-              <label class="sign-option"><input type="checkbox" name="signs" value="anxious"><span class="sign-card" data-icon="不">不安</span></label>
-              <label class="sign-option"><input type="checkbox" name="signs" value="foggy"><span class="sign-card" data-icon="霧">ぼんやり</span></label>
+              <label class="sign-option"><input type="checkbox" name="signs" value="restless"><span class="sign-card" data-icon="〰️">そわそわ</span></label>
+              <label class="sign-option"><input type="checkbox" name="signs" value="racing"><span class="sign-card" data-icon="💭">思考加速</span></label>
+              <label class="sign-option"><input type="checkbox" name="signs" value="anxious"><span class="sign-card" data-icon="☁️">不安</span></label>
+              <label class="sign-option"><input type="checkbox" name="signs" value="foggy"><span class="sign-card" data-icon="🌫️">ぼんやり</span></label>
             </div>
             <div class="sign-group">
               <h3>コミュニケーション</h3>
-              <label class="sign-option"><input type="checkbox" name="signs" value="talkative"><span class="sign-card" data-icon="話">連絡増</span></label>
-              <label class="sign-option"><input type="checkbox" name="signs" value="irritable"><span class="sign-card" data-icon="刺">衝突</span></label>
-              <label class="sign-option"><input type="checkbox" name="signs" value="withdrawal"><span class="sign-card" data-icon="閉">会話つらい</span></label>
-              <label class="sign-option"><input type="checkbox" name="signs" value="noReply"><span class="sign-card" data-icon="未">返信回避</span></label>
+              <label class="sign-option"><input type="checkbox" name="signs" value="talkative"><span class="sign-card" data-icon="💬">連絡増</span></label>
+              <label class="sign-option"><input type="checkbox" name="signs" value="irritable"><span class="sign-card" data-icon="🔥">衝突</span></label>
+              <label class="sign-option"><input type="checkbox" name="signs" value="withdrawal"><span class="sign-card" data-icon="🚪">会話つらい</span></label>
+              <label class="sign-option"><input type="checkbox" name="signs" value="noReply"><span class="sign-card" data-icon="📵">返信回避</span></label>
             </div>
             <div class="sign-group">
               <h3>食事・生活</h3>
-              <label class="sign-option"><input type="checkbox" name="signs" value="lowAppetite"><span class="sign-card" data-icon="少">食欲なし</span></label>
-              <label class="sign-option"><input type="checkbox" name="signs" value="overeating"><span class="sign-card" data-icon="多">食べすぎ</span></label>
-              <label class="sign-option"><input type="checkbox" name="signs" value="skippedMeals"><span class="sign-card" data-icon="抜">食事抜き</span></label>
-              <label class="sign-option"><input type="checkbox" name="signs" value="caffeine"><span class="sign-card" data-icon="茶">カフェイン</span></label>
-              <label class="sign-option"><input type="checkbox" name="signs" value="alcohol"><span class="sign-card" data-icon="酒">飲酒</span></label>
-              <label class="sign-option"><input type="checkbox" name="signs" value="spending"><span class="sign-card" data-icon="過">過食</span></label>
-              <label class="sign-option"><input type="checkbox" name="signs" value="exercise"><span class="sign-card" data-icon="歩">運動</span></label>
+              <label class="sign-option"><input type="checkbox" name="signs" value="lowAppetite"><span class="sign-card" data-icon="🍃">食欲なし</span></label>
+              <label class="sign-option"><input type="checkbox" name="signs" value="overeating"><span class="sign-card" data-icon="🍽️">食べすぎ</span></label>
+              <label class="sign-option"><input type="checkbox" name="signs" value="skippedMeals"><span class="sign-card" data-icon="⏳">食事抜き</span></label>
+              <label class="sign-option"><input type="checkbox" name="signs" value="caffeine"><span class="sign-card" data-icon="☕">カフェイン</span></label>
+              <label class="sign-option"><input type="checkbox" name="signs" value="alcohol"><span class="sign-card" data-icon="🍷">飲酒</span></label>
+              <label class="sign-option"><input type="checkbox" name="signs" value="spending"><span class="sign-card" data-icon="🥣">過食</span></label>
+              <label class="sign-option"><input type="checkbox" name="signs" value="exercise"><span class="sign-card" data-icon="👟">運動</span></label>
             </div>
             <div class="sign-group">
               <h3>安全</h3>
-              <label class="sign-option"><input type="checkbox" name="signs" value="hopeless"><span class="sign-card" data-icon="SOS">強い絶望感</span></label>
+              <label class="sign-option"><input type="checkbox" name="signs" value="hopeless"><span class="sign-card" data-icon="🆘">強い絶望感</span></label>
             </div>
           </fieldset>
 
@@ -153,7 +163,7 @@
             </label>
             <label class="field">
               <span>歩数 任意</span>
-              <input id="steps" name="steps" type="number" inputmode="numeric" min="0" step="500" placeholder="例: 12000">
+              <input id="steps" name="steps" type="number" inputmode="numeric" min="0" step="1" placeholder="例: 12000">
             </label>
           </div>
 
@@ -201,6 +211,10 @@
               <h2>14日間の傾向</h2>
               <p>上下の揺れと睡眠の変化を同じ画面で確認します。</p>
             </div>
+            <label class="toggle-field">
+              <input id="showStepsTrend" type="checkbox" checked>
+              <span>歩数も表示</span>
+            </label>
           </div>
           <canvas id="trendChart" width="1100" height="420" aria-label="14日間の気分と睡眠グラフ"></canvas>
           <div class="summary-grid" id="summaryGrid"></div>
@@ -266,6 +280,33 @@
         </div>
       </section>
     </main>
+
+    <div class="toast" id="saveToast" role="status" aria-live="polite">保存しました</div>
+
+    <div class="modal-backdrop" id="settingsModal" aria-hidden="true">
+      <section class="settings-panel" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
+        <div class="settings-head">
+          <div>
+            <h2 id="settingsTitle">設定</h2>
+            <p>記録のリマインダーを設定できます。</p>
+          </div>
+          <button class="icon-button" id="settingsClose" type="button" aria-label="設定を閉じる">×</button>
+        </div>
+        <label class="toggle-row">
+          <input id="reminderEnabled" type="checkbox">
+          <span>毎日通知する</span>
+        </label>
+        <label class="field">
+          <span>通知時刻</span>
+          <input id="reminderTime" type="time" step="600" value="21:00">
+        </label>
+        <p class="setting-note" id="reminderStatus">通知はこのブラウザで許可すると使えます。</p>
+        <div class="actions">
+          <button class="primary" id="saveSettings" type="button">設定を保存</button>
+          <button class="ghost" id="testReminder" type="button">通知を試す</button>
+        </div>
+      </section>
+    </div>
 
     <script src="app.js"></script>
   </body>

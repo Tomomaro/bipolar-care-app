@@ -50,6 +50,25 @@ button {
   padding: 28px clamp(18px, 5vw, 56px);
 }
 
+.top-actions {
+  align-items: center;
+  display: flex;
+  gap: 10px;
+}
+
+.icon-button {
+  align-items: center;
+  background: rgba(255, 253, 249, 0.7);
+  border: 1px solid rgba(255, 253, 249, 0.9);
+  border-radius: 999px;
+  color: #41685e;
+  display: inline-flex;
+  font-size: 1rem;
+  height: 40px;
+  justify-content: center;
+  width: 40px;
+}
+
 .eyebrow {
   color: #6c8378;
   font-size: 0.78rem;
@@ -151,6 +170,30 @@ h3 {
   gap: 18px;
   justify-content: space-between;
   margin-bottom: 20px;
+}
+
+.toggle-field,
+.toggle-row {
+  align-items: center;
+  display: inline-flex;
+  gap: 8px;
+}
+
+.toggle-field {
+  background: #fffdf9;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: #41685e;
+  font-size: 0.88rem;
+  font-weight: 700;
+  padding: 8px 12px;
+  white-space: nowrap;
+}
+
+.toggle-field input,
+.toggle-row input {
+  min-height: 0;
+  width: auto;
 }
 
 .form-head p,
@@ -431,7 +474,7 @@ output {
   justify-content: center;
   min-height: 34px;
   overflow: hidden;
-  padding: 5px 4px;
+  padding: 5px 24px 5px 4px;
   position: relative;
   text-align: center;
   white-space: nowrap;
@@ -439,20 +482,20 @@ output {
 
 .sign-card::before {
   align-items: center;
-  background: rgba(238, 245, 238, 0.92);
+  background: rgba(238, 245, 238, 0.95);
   border-radius: 50%;
   color: #5e8f83;
   content: attr(data-icon);
   display: flex;
-  font-size: 0.62rem;
+  font-size: 0.82rem;
   font-weight: 800;
-  height: 17px;
+  height: 21px;
   justify-content: center;
   line-height: 1;
   position: absolute;
   right: 3px;
   top: 3px;
-  width: 17px;
+  width: 21px;
 }
 
 .sign-option input:checked + .sign-card {
@@ -651,7 +694,7 @@ output {
 .summary-grid {
   display: grid;
   gap: 12px;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
   margin-top: 14px;
 }
 
@@ -748,6 +791,76 @@ output {
   margin: 0;
 }
 
+.toast {
+  background: #315e55;
+  border-radius: 999px;
+  bottom: 22px;
+  box-shadow: 0 10px 26px rgba(63, 49, 34, 0.18);
+  color: #fff;
+  font-weight: 800;
+  left: 50%;
+  opacity: 0;
+  padding: 11px 18px;
+  pointer-events: none;
+  position: fixed;
+  transform: translate(-50%, 14px);
+  transition: opacity 180ms ease, transform 180ms ease;
+  z-index: 30;
+}
+
+.toast.is-visible {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
+.modal-backdrop {
+  align-items: center;
+  background: rgba(45, 41, 36, 0.32);
+  display: none;
+  inset: 0;
+  justify-content: center;
+  padding: 18px;
+  position: fixed;
+  z-index: 20;
+}
+
+.modal-backdrop.is-open {
+  display: flex;
+}
+
+.settings-panel {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  box-shadow: 0 24px 60px rgba(63, 49, 34, 0.24);
+  display: grid;
+  gap: 16px;
+  max-width: 460px;
+  padding: 22px;
+  width: min(100%, 460px);
+}
+
+.settings-head {
+  align-items: start;
+  display: flex;
+  gap: 16px;
+  justify-content: space-between;
+}
+
+.settings-head p,
+.setting-note {
+  color: var(--muted);
+  margin: 0;
+}
+
+.toggle-row {
+  background: var(--soft);
+  border: 1px solid #d4e1d5;
+  border-radius: 8px;
+  font-weight: 800;
+  padding: 12px;
+}
+
 @media (max-width: 1120px) {
   #today {
     grid-template-columns: 1fr;
@@ -778,6 +891,10 @@ output {
   .form-head,
   .section-head {
     display: grid;
+  }
+
+  .toggle-field {
+    justify-self: start;
   }
 }
 
