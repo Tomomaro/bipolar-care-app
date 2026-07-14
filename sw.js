@@ -1,4 +1,4 @@
-const CACHE_NAME = "bipolar-care-app-v1";
+const CACHE_NAME = "bipolar-care-app-v3";
 const APP_SHELL = [
   "./",
   "index.html",

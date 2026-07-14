@@ -38,13 +38,58 @@
           <div class="form-head">
             <div>
               <h2>今日の記録</h2>
-              <p>睡眠、気分、暮らしのサインを日ごとに残します。</p>
+              <p>昨夜の睡眠を中心に、30秒から1分で残します。</p>
             </div>
             <label class="date-field">
               <span>日付</span>
               <input id="entryDate" name="date" type="date" required>
             </label>
           </div>
+
+          <section class="night-summary" id="nightSummary" aria-live="polite"></section>
+
+          <div class="sleep-first">
+            <div>
+              <h3>昨夜の睡眠</h3>
+              <p>就寝と起床を入れると、自動で時間を計算します。</p>
+            </div>
+          </div>
+
+          <div class="grid three">
+            <label class="field">
+              <span>就寝時間</span>
+              <select id="bedtime" name="bedtime"></select>
+            </label>
+            <label class="field">
+              <span>起床時間</span>
+              <select id="wakeTime" name="wakeTime"></select>
+            </label>
+            <div class="sleep-result" aria-live="polite">
+              <span>ベッドにいた時間</span>
+              <strong id="sleepOut">8.0h</strong>
+            </div>
+          </div>
+
+          <fieldset class="awakening-question">
+            <legend>夜中に起きましたか？</legend>
+            <div class="segmented">
+              <label><input type="radio" name="hadAwakening" value="no" checked><span>いいえ</span></label>
+              <label><input type="radio" name="hadAwakening" value="yes"><span>はい</span></label>
+            </div>
+          </fieldset>
+
+          <section class="awakening-panel" id="awakeningPanel" hidden>
+            <div class="section-head compact">
+              <div>
+                <h3>中途覚醒の記録</h3>
+                <p>起きていた時間、夜食、再入眠の体感を個別に残します。</p>
+              </div>
+            </div>
+            <div class="awakening-list" id="awakeningList"></div>
+            <button class="ghost add-awakening" id="addAwakening" type="button">＋ 別の中途覚醒を追加</button>
+          </section>
+
+          <section class="sleep-timeline" id="sleepTimeline" aria-live="polite"></section>
 
           <div class="grid one">
             <fieldset class="control-block">
@@ -80,21 +125,6 @@
                 </div>
               </div>
             </fieldset>
-          </div>
-
-          <div class="grid three">
-            <label class="field">
-              <span>就寝時間</span>
-              <select id="bedtime" name="bedtime"></select>
-            </label>
-            <label class="field">
-              <span>起床時間</span>
-              <select id="wakeTime" name="wakeTime"></select>
-            </label>
-            <div class="sleep-result" aria-live="polite">
-              <span>睡眠時間</span>
-              <strong id="sleepOut">8.0h</strong>
-            </div>
           </div>
 
           <div class="grid one">
@@ -208,16 +238,11 @@
         <div class="panel">
           <div class="section-head">
             <div>
-              <h2>14日間の傾向</h2>
-              <p>上下の揺れと睡眠の変化を同じ画面で確認します。</p>
+              <h2>傾向ダッシュボード</h2>
+              <p>睡眠を中心に、自分だけの生活リズムを見つけます。</p>
             </div>
-            <label class="toggle-field">
-              <input id="showStepsTrend" type="checkbox" checked>
-              <span>歩数も表示</span>
-            </label>
           </div>
-          <canvas id="trendChart" width="1100" height="420" aria-label="14日間の気分と睡眠グラフ"></canvas>
-          <div class="summary-grid" id="summaryGrid"></div>
+          <div class="trend-dashboard" id="trendDashboard"></div>
         </div>
       </section>
 
