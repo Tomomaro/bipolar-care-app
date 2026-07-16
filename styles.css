@@ -473,6 +473,28 @@ output {
   white-space: nowrap;
 }
 
+.baseline-strip {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(3, 1fr);
+  margin-bottom: 14px;
+}
+
+.baseline-strip span {
+  background: rgba(255, 253, 249, 0.78);
+  border: 1px solid rgba(223, 212, 198, 0.7);
+  border-radius: 999px;
+  color: #5f6c67;
+  font-size: 0.82rem;
+  font-weight: 800;
+  padding: 8px 10px;
+  text-align: center;
+}
+
+.baseline-strip b {
+  color: #315e55;
+}
+
 .night-summary-list {
   background: rgba(255, 253, 249, 0.74);
   border: 1px solid rgba(223, 212, 198, 0.72);
@@ -1123,6 +1145,23 @@ output {
   line-height: 1;
 }
 
+.trend-baseline {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  grid-column: 1 / -1;
+}
+
+.trend-baseline span {
+  background: rgba(255, 253, 249, 0.72);
+  border: 1px solid rgba(111, 154, 138, 0.18);
+  border-radius: 999px;
+  color: #41685e;
+  font-size: 0.84rem;
+  font-weight: 800;
+  padding: 8px 11px;
+}
+
 .trend-card {
   display: grid;
   gap: 14px;
@@ -1132,6 +1171,18 @@ output {
 
 .trend-card.wide {
   grid-column: span 1;
+}
+
+.rhythm-card {
+  background:
+    linear-gradient(140deg, rgba(255, 253, 249, 0.98), rgba(239, 247, 243, 0.98));
+}
+
+.rhythm-stars {
+  color: #6f9a8a;
+  display: block;
+  font-size: 2rem;
+  letter-spacing: 0;
 }
 
 .trend-card-head {
@@ -1179,7 +1230,7 @@ output {
   align-items: end;
   display: grid;
   gap: 12px;
-  grid-template-columns: repeat(6, 1fr);
+  grid-template-columns: repeat(7, 1fr);
   min-height: 142px;
 }
 
@@ -1296,6 +1347,124 @@ output {
   color: #3e4d47;
   font-weight: 800;
   padding: 11px 12px;
+}
+
+.weekday-bars {
+  align-items: end;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(7, 1fr);
+  min-height: 166px;
+}
+
+.weekday-bars div {
+  align-items: center;
+  display: grid;
+  gap: 7px;
+  height: 160px;
+  justify-items: center;
+}
+
+.weekday-bars i {
+  align-self: end;
+  background: linear-gradient(180deg, #b9d8ce, #6f9a8a);
+  border-radius: 999px 999px 6px 6px;
+  display: block;
+  min-height: 8px;
+  width: 22px;
+}
+
+.weekday-bars span,
+.weekday-bars b {
+  color: var(--muted);
+  font-size: 0.74rem;
+  font-weight: 800;
+}
+
+.ai-panel {
+  display: grid;
+  gap: 18px;
+}
+
+.ai-analysis {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr);
+}
+
+.ai-hero-card,
+.ai-finding,
+.ai-note {
+  background: #fffdfa;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  box-shadow: 0 10px 22px rgba(106, 86, 64, 0.055);
+}
+
+.ai-hero-card {
+  background:
+    linear-gradient(135deg, rgba(240, 247, 241, 0.97), rgba(255, 248, 239, 0.97));
+  display: grid;
+  gap: 12px;
+  padding: 22px;
+}
+
+.ai-hero-card > span,
+.ai-hero-card small,
+.ai-finding span,
+.ai-note b {
+  color: var(--muted);
+  font-size: 0.86rem;
+  font-weight: 800;
+}
+
+.ai-hero-card strong {
+  color: var(--accent);
+  display: block;
+  font-size: clamp(3rem, 7vw, 5rem);
+  line-height: 0.95;
+}
+
+.ai-metrics {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(3, 1fr);
+  margin-top: 8px;
+}
+
+.ai-metrics p {
+  background: rgba(255, 253, 249, 0.78);
+  border: 1px solid rgba(223, 212, 198, 0.7);
+  border-radius: 12px;
+  margin: 0;
+  padding: 12px;
+}
+
+.ai-metrics b {
+  color: #315e55;
+  display: block;
+  font-size: 1.5rem;
+}
+
+.ai-finding-list {
+  display: grid;
+  gap: 10px;
+}
+
+.ai-finding {
+  padding: 14px 16px;
+}
+
+.ai-finding p,
+.ai-note p {
+  color: #3e4d47;
+  font-weight: 800;
+  margin: 5px 0 0;
+}
+
+.ai-note {
+  grid-column: 1 / -1;
+  padding: 14px 16px;
 }
 
 .plan-grid {
@@ -1470,12 +1639,16 @@ output {
   .trend-dashboard,
   .trend-hero-card,
   .trend-hero-metrics,
+  .ai-analysis,
+  .ai-metrics,
+  .baseline-strip,
   .summary-grid {
     grid-template-columns: 1fr;
   }
 
   .trend-hero-card,
-  .trend-card.wide {
+  .trend-card.wide,
+  .ai-note {
     grid-column: auto;
   }
 

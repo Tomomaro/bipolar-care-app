@@ -29,7 +29,7 @@
       <nav class="tabs" aria-label="画面切り替え">
         <button class="tab is-active" data-view="today" type="button">今日</button>
         <button class="tab" data-view="trends" type="button">傾向</button>
-        <button class="tab" data-view="plan" type="button">予兆と対策</button>
+        <button class="tab" data-view="plan" type="button">AI分析</button>
         <button class="tab" data-view="data" type="button">データ</button>
       </nav>
 
@@ -247,42 +247,17 @@
       </section>
 
       <section class="view" id="plan">
-        <div class="panel plan-grid">
-          <div>
-            <h2>予兆と対策</h2>
-            <p>調子の変化に気づいた時、先に見るための短いメモです。</p>
+        <div class="panel ai-panel">
+          <div class="section-head">
+            <div>
+              <h2>AI分析</h2>
+              <p>保存済みデータから、あなた固有の傾向を短く表示します。</p>
+            </div>
           </div>
-          <div class="plan-column">
-            <h3>上がりすぎの予兆</h3>
-            <ul>
-              <li>寝つきにくい、途中で起きる、睡眠が短い</li>
-              <li>連絡・予定・カフェイン・飲酒が増える</li>
-              <li>考えが速い、そわそわする、決断を急ぎたくなる</li>
-            </ul>
-            <h3>対策</h3>
-            <ul>
-              <li>今夜の就寝時刻を固定する</li>
-              <li>予定を1つ減らす</li>
-              <li>大きな買い物・契約・予定追加を24時間保留する</li>
-            </ul>
-          </div>
-          <div class="plan-column">
-            <h3>下がりすぎの予兆</h3>
-            <ul>
-              <li>眠気・体の重さ・ぼんやり感が強い</li>
-              <li>返信や人との会話を避ける</li>
-              <li>食事を抜く、入浴や外出が重くなる</li>
-            </ul>
-            <h3>対策</h3>
-            <ul>
-              <li>最低限の予定を1つだけ選ぶ</li>
-              <li>水分・食事・服薬を確認する</li>
-              <li>危険を感じたら一人で判断せず相談先につなぐ</li>
-            </ul>
-          </div>
+          <div class="ai-analysis" id="aiAnalysis"></div>
         </div>
         <div class="notice">
-          このアプリは医療判断の代わりではありません。服薬変更や緊急時の判断は、主治医や地域の緊急窓口に相談してください。
+          このアプリは診断を行いません。表示内容は記録上の傾向です。服薬変更や緊急時の判断は、主治医や地域の緊急窓口に相談してください。
         </div>
       </section>
 
