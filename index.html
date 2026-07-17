@@ -141,94 +141,164 @@
 
           <fieldset class="check-block">
             <legend>今日あったサイン</legend>
-            <div class="sign-group">
-              <h3>睡眠</h3>
-              <label class="sign-option"><input type="checkbox" name="signs" value="sleepy"><span class="sign-card" data-icon="💤">眠気</span></label>
-              <label class="sign-option"><input type="checkbox" name="signs" value="hardToSleep"><span class="sign-card" data-icon="🌙">入眠しにくい</span></label>
-              <label class="sign-option"><input type="checkbox" name="signs" value="nightWaking"><span class="sign-card" data-icon="🕯️">中途覚醒</span></label>
-              <label class="sign-option"><input type="checkbox" name="signs" value="earlyWaking"><span class="sign-card" data-icon="🌅">早朝覚醒</span></label>
-            </div>
-            <div class="sign-group">
-              <h3>体調</h3>
-              <label class="sign-option"><input type="checkbox" name="signs" value="bodyHeavy"><span class="sign-card" data-icon="🪨">体が重い</span></label>
-              <label class="sign-option"><input type="checkbox" name="signs" value="period"><span class="sign-card" data-icon="🌕">生理</span></label>
-              <label class="sign-option"><input type="checkbox" name="signs" value="dizzy"><span class="sign-card" data-icon="🌀">めまい</span></label>
-              <label class="sign-option"><input type="checkbox" name="signs" value="headache"><span class="sign-card" data-icon="⚡">頭痛</span></label>
-              <label class="sign-option"><input type="checkbox" name="signs" value="nausea"><span class="sign-card" data-icon="🌿">吐き気</span></label>
-            </div>
-            <div class="sign-group">
-              <h3>メンタル</h3>
-              <label class="sign-option"><input type="checkbox" name="signs" value="restless"><span class="sign-card" data-icon="〰️">そわそわ</span></label>
-              <label class="sign-option"><input type="checkbox" name="signs" value="racing"><span class="sign-card" data-icon="💭">思考加速</span></label>
-              <label class="sign-option"><input type="checkbox" name="signs" value="anxious"><span class="sign-card" data-icon="☁️">不安</span></label>
-              <label class="sign-option"><input type="checkbox" name="signs" value="foggy"><span class="sign-card" data-icon="🌫️">ぼんやり</span></label>
-            </div>
-            <div class="sign-group">
-              <h3>コミュニケーション</h3>
-              <label class="sign-option"><input type="checkbox" name="signs" value="talkative"><span class="sign-card" data-icon="💬">連絡増</span></label>
-              <label class="sign-option"><input type="checkbox" name="signs" value="irritable"><span class="sign-card" data-icon="🔥">衝突</span></label>
-              <label class="sign-option"><input type="checkbox" name="signs" value="withdrawal"><span class="sign-card" data-icon="🚪">会話つらい</span></label>
-              <label class="sign-option"><input type="checkbox" name="signs" value="noReply"><span class="sign-card" data-icon="📵">返信回避</span></label>
-            </div>
-            <div class="sign-group">
-              <h3>食事・生活</h3>
-              <label class="sign-option"><input type="checkbox" name="signs" value="lowAppetite"><span class="sign-card" data-icon="🍃">食欲なし</span></label>
-              <label class="sign-option"><input type="checkbox" name="signs" value="overeating"><span class="sign-card" data-icon="🍽️">食べすぎ</span></label>
-              <label class="sign-option"><input type="checkbox" name="signs" value="skippedMeals"><span class="sign-card" data-icon="⏳">食事抜き</span></label>
-              <label class="sign-option"><input type="checkbox" name="signs" value="caffeine"><span class="sign-card" data-icon="☕">カフェイン</span></label>
-              <label class="sign-option"><input type="checkbox" name="signs" value="alcohol"><span class="sign-card" data-icon="🍷">飲酒</span></label>
-              <label class="sign-option"><input type="checkbox" name="signs" value="spending"><span class="sign-card" data-icon="🥣">過食</span></label>
-              <label class="sign-option"><input type="checkbox" name="signs" value="exercise"><span class="sign-card" data-icon="👟">運動</span></label>
-            </div>
-            <div class="sign-group">
-              <h3>安全</h3>
-              <label class="sign-option"><input type="checkbox" name="signs" value="hopeless"><span class="sign-card" data-icon="🆘">強い絶望感</span></label>
-            </div>
+            <details class="sign-group" data-sign-group>
+              <summary><span>睡眠</span><small data-sign-summary>未選択</small></summary>
+              <div class="sign-selected" data-sign-selected></div>
+              <div class="sign-options">
+                <label class="sign-option"><input type="checkbox" name="signs" value="sleepy"><span class="sign-card" data-icon="💤">眠気</span></label>
+                <label class="sign-option"><input type="checkbox" name="signs" value="hardToSleep"><span class="sign-card" data-icon="🌙">入眠しにくい</span></label>
+                <label class="sign-option"><input type="checkbox" name="signs" value="nightWaking"><span class="sign-card" data-icon="🕯️">中途覚醒</span></label>
+                <label class="sign-option"><input type="checkbox" name="signs" value="earlyWaking"><span class="sign-card" data-icon="🌅">早朝覚醒</span></label>
+              </div>
+            </details>
+            <details class="sign-group" data-sign-group>
+              <summary><span>体調</span><small data-sign-summary>未選択</small></summary>
+              <div class="sign-selected" data-sign-selected></div>
+              <div class="sign-options">
+                <label class="sign-option"><input type="checkbox" name="signs" value="bodyHeavy"><span class="sign-card" data-icon="🪨">体が重い</span></label>
+                <label class="sign-option"><input type="checkbox" name="signs" value="period"><span class="sign-card" data-icon="🌕">生理</span></label>
+                <label class="sign-option"><input type="checkbox" name="signs" value="dizzy"><span class="sign-card" data-icon="🌀">めまい</span></label>
+                <label class="sign-option"><input type="checkbox" name="signs" value="headache"><span class="sign-card" data-icon="⚡">頭痛</span></label>
+                <label class="sign-option"><input type="checkbox" name="signs" value="nausea"><span class="sign-card" data-icon="🌿">吐き気</span></label>
+              </div>
+            </details>
+            <details class="sign-group" data-sign-group>
+              <summary><span>メンタル</span><small data-sign-summary>未選択</small></summary>
+              <div class="sign-selected" data-sign-selected></div>
+              <div class="sign-options">
+                <label class="sign-option"><input type="checkbox" name="signs" value="restless"><span class="sign-card" data-icon="〰️">そわそわ</span></label>
+                <label class="sign-option"><input type="checkbox" name="signs" value="racing"><span class="sign-card" data-icon="💭">思考加速</span></label>
+                <label class="sign-option"><input type="checkbox" name="signs" value="anxious"><span class="sign-card" data-icon="☁️">不安</span></label>
+                <label class="sign-option"><input type="checkbox" name="signs" value="foggy"><span class="sign-card" data-icon="🌫️">ぼんやり</span></label>
+              </div>
+            </details>
+            <details class="sign-group" data-sign-group>
+              <summary><span>コミュニケーション</span><small data-sign-summary>未選択</small></summary>
+              <div class="sign-selected" data-sign-selected></div>
+              <div class="sign-options">
+                <label class="sign-option"><input type="checkbox" name="signs" value="talkative"><span class="sign-card" data-icon="💬">連絡増</span></label>
+                <label class="sign-option"><input type="checkbox" name="signs" value="irritable"><span class="sign-card" data-icon="🔥">衝突</span></label>
+                <label class="sign-option"><input type="checkbox" name="signs" value="withdrawal"><span class="sign-card" data-icon="🚪">会話つらい</span></label>
+                <label class="sign-option"><input type="checkbox" name="signs" value="noReply"><span class="sign-card" data-icon="📵">返信回避</span></label>
+              </div>
+            </details>
+            <details class="sign-group" data-sign-group>
+              <summary><span>食事・生活</span><small data-sign-summary>未選択</small></summary>
+              <div class="sign-selected" data-sign-selected></div>
+              <div class="sign-options">
+                <label class="sign-option"><input type="checkbox" name="signs" value="lowAppetite"><span class="sign-card" data-icon="🍃">食欲なし</span></label>
+                <label class="sign-option"><input type="checkbox" name="signs" value="overeating"><span class="sign-card" data-icon="🍽️">食べすぎ</span></label>
+                <label class="sign-option"><input type="checkbox" name="signs" value="skippedMeals"><span class="sign-card" data-icon="⏳">食事抜き</span></label>
+                <label class="sign-option"><input type="checkbox" name="signs" value="caffeine"><span class="sign-card" data-icon="☕">カフェイン</span></label>
+                <label class="sign-option"><input type="checkbox" name="signs" value="alcohol"><span class="sign-card" data-icon="🍷">飲酒</span></label>
+                <label class="sign-option"><input type="checkbox" name="signs" value="spending"><span class="sign-card" data-icon="🥣">過食</span></label>
+                <label class="sign-option"><input type="checkbox" name="signs" value="exercise"><span class="sign-card" data-icon="👟">運動</span></label>
+              </div>
+            </details>
+            <details class="sign-group" data-sign-group>
+              <summary><span>安全</span><small data-sign-summary>未選択</small></summary>
+              <div class="sign-selected" data-sign-selected></div>
+              <div class="sign-options">
+                <label class="sign-option"><input type="checkbox" name="signs" value="hopeless"><span class="sign-card" data-icon="🆘">強い絶望感</span></label>
+              </div>
+            </details>
           </fieldset>
 
-          <div class="grid two">
-            <label class="field">
-              <span>イベント 任意</span>
-              <input id="events" name="events" type="text" placeholder="飲み会、旅行、仕事多めなど">
+          <details class="optional-card" id="dailyEventsPanel">
+            <summary>
+              <span>今日のできごと</span>
+              <small>イベント・活動量・メモ</small>
+            </summary>
+            <p>必要な日だけ開いて、後から分析しやすい形で残します。</p>
+            <div class="tag-options event-tags">
+              <label class="tag-option"><input type="checkbox" name="eventTags" value="仕事"><span>仕事</span></label>
+              <label class="tag-option"><input type="checkbox" name="eventTags" value="休み"><span>休み</span></label>
+              <label class="tag-option"><input type="checkbox" name="eventTags" value="通院"><span>通院</span></label>
+              <label class="tag-option"><input type="checkbox" name="eventTags" value="運動"><span>運動</span></label>
+              <label class="tag-option"><input type="checkbox" name="eventTags" value="外出"><span>外出</span></label>
+              <label class="tag-option"><input type="checkbox" name="eventTags" value="デート"><span>デート</span></label>
+              <label class="tag-option"><input type="checkbox" name="eventTags" value="家族・対人"><span>家族・対人</span></label>
+              <label class="tag-option"><input type="checkbox" name="eventTags" value="旅行"><span>旅行</span></label>
+              <label class="tag-option"><input type="checkbox" name="eventTags" value="飲み会"><span>飲み会</span></label>
+              <label class="tag-option"><input type="checkbox" name="eventTags" value="大きな買い物"><span>大きな買い物</span></label>
+              <label class="tag-option"><input type="checkbox" name="eventTags" value="生活環境の変化"><span>生活環境の変化</span></label>
+              <label class="tag-option"><input type="checkbox" name="eventTags" value="生理"><span>生理</span></label>
+              <label class="tag-option"><input type="checkbox" name="eventTags" value="体調不良"><span>体調不良</span></label>
+              <label class="tag-option"><input type="checkbox" name="eventTags" value="その他" id="eventOtherToggle"><span>その他</span></label>
+            </div>
+            <label class="field" id="eventOtherField" hidden>
+              <span>その他のタグ</span>
+              <input id="eventOther" name="eventOther" type="text" placeholder="例: 試験、引っ越し">
+            </label>
+            <label class="field" id="eventDetailField" hidden>
+              <span>イベント詳細</span>
+              <input id="eventDetail" name="eventDetail" type="text" placeholder="例: 初出勤、健衣くんとディズニー">
             </label>
             <label class="field">
-              <span>歩数 任意</span>
-              <input id="steps" name="steps" type="number" inputmode="numeric" min="0" step="1" placeholder="例: 12000">
+              <span>活動量</span>
+              <select id="activityLevel" name="activityLevel">
+                <option value="none">未入力</option>
+                <option value="low">少ない</option>
+                <option value="usual">いつも通り</option>
+                <option value="high">多い</option>
+              </select>
             </label>
-          </div>
+            <details class="inline-details">
+              <summary>歩数の詳細を追加</summary>
+              <label class="field">
+                <span>歩数 手入力</span>
+                <input id="steps" name="steps" type="number" inputmode="numeric" min="0" step="1" placeholder="例: 12000">
+              </label>
+              <input id="stepsSource" name="stepsSource" type="hidden" value="none">
+            </details>
+            <details class="inline-details" id="notePanel">
+              <summary>＋メモを追加</summary>
+              <label class="field note-field">
+                <span>今日のメモ</span>
+                <textarea id="note" name="note" rows="3" placeholder="今日の変化や、記録に残したいこと&#10;例: 仕事で少し疲れた / 予定を詰めすぎた"></textarea>
+              </label>
+            </details>
+          </details>
 
-          <fieldset class="tag-block">
-            <legend>通院メモタグ 任意</legend>
+          <details class="optional-card" id="doctorMemoPanel">
+            <summary>
+              <span>次回の診察で話したいこと</span>
+              <small>受診用タグと補足</small>
+            </summary>
+            <p>日常メモとは分けて、受診時に見返したい内容だけ残します。</p>
             <div class="tag-options">
-              <label class="tag-option"><input type="checkbox" name="doctorTags" value="主治医に相談"><span>主治医に相談</span></label>
-              <label class="tag-option"><input type="checkbox" name="doctorTags" value="薬"><span>薬</span></label>
               <label class="tag-option"><input type="checkbox" name="doctorTags" value="睡眠"><span>睡眠</span></label>
               <label class="tag-option"><input type="checkbox" name="doctorTags" value="気分の上がり"><span>気分の上がり</span></label>
               <label class="tag-option"><input type="checkbox" name="doctorTags" value="気分の下がり"><span>気分の下がり</span></label>
+              <label class="tag-option"><input type="checkbox" name="doctorTags" value="薬"><span>薬</span></label>
               <label class="tag-option"><input type="checkbox" name="doctorTags" value="副作用"><span>副作用</span></label>
-              <label class="tag-option"><input type="checkbox" name="doctorTags" value="月経"><span>月経</span></label>
+              <label class="tag-option"><input type="checkbox" name="doctorTags" value="体調"><span>体調</span></label>
+              <label class="tag-option"><input type="checkbox" name="doctorTags" value="生理"><span>生理</span></label>
               <label class="tag-option"><input type="checkbox" name="doctorTags" value="生活イベント"><span>生活イベント</span></label>
               <label class="tag-option"><input type="checkbox" name="doctorTags" value="仕事・学校"><span>仕事・学校</span></label>
               <label class="tag-option"><input type="checkbox" name="doctorTags" value="家族・対人"><span>家族・対人</span></label>
+              <label class="tag-option"><input type="checkbox" name="doctorTags" value="主治医に相談"><span>主治医に相談</span></label>
             </div>
-          </fieldset>
-
-          <label class="field note-field">
-            <span>メモ</span>
-            <textarea id="note" name="note" rows="3" placeholder="きっかけ、体調、予定、相談したいことなど"></textarea>
-          </label>
+            <label class="field">
+              <span>診察用メモ</span>
+              <textarea id="doctorNote" name="doctorNote" rows="2" placeholder="例: 中途覚醒が続いている。薬の時間を相談したい。"></textarea>
+            </label>
+          </details>
 
           <div class="actions">
             <button class="primary" type="submit">保存</button>
-            <button class="ghost" id="clearToday" type="button">今日の入力を消す</button>
+            <button class="text-danger" id="clearToday" type="button">今日の入力を消す</button>
+          </div>
+          <div class="sticky-save">
+            <button class="primary" type="submit">保存</button>
           </div>
         </form>
 
         <aside class="panel insight">
-          <h2>今日の見立て</h2>
+          <h2>今日の振り返り</h2>
           <div class="risk-card" id="riskCard">
             <strong>記録すると表示されます</strong>
-            <p>睡眠、気分、サインをもとに注意ポイントを出します。</p>
+            <p>保存後、その日の記録から短く振り返ります。</p>
           </div>
           <div class="mini-list" id="recentList"></div>
         </aside>
@@ -239,7 +309,7 @@
           <div class="section-head">
             <div>
               <h2>傾向ダッシュボード</h2>
-              <p>睡眠を中心に、自分だけの生活リズムを見つけます。</p>
+              <p>保存済みデータを期間ごとの数字とグラフで確認します。</p>
             </div>
           </div>
           <div class="trend-dashboard" id="trendDashboard"></div>

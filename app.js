@@ -70,12 +70,22 @@ const reminderStatus = document.querySelector("#reminderStatus");
 const saveSettings = document.querySelector("#saveSettings");
 const testReminder = document.querySelector("#testReminder");
 const showStepsTrend = document.querySelector("#showStepsTrend");
+const TREND_MIN_COUNTS = {
+  average: 3,
+  comparison: 3,
+  line: 3,
+  trendComment: 7,
+  correlation: 10
+};
+const TREND_PERIODS = [7, 30, 90];
+const EVENT_TAGS = ["仕事", "休み", "通院", "運動", "外出", "デート", "家族・対人", "旅行", "飲み会", "大きな買い物", "生活環境の変化", "生理", "体調不良", "その他"];
 
 let entries = loadEntries();
 let activeDoctorTag = "all";
 let settings = loadSettings();
 let reminderTimer = null;
 let formAwakenings = [];
+let trendPeriod = 30;
 saveEntries();
 
 function isoToday() {
@@ -134,6 +144,13 @@ function normalizeEntries(items) {
       const fallbackWakeTime = wakeTimeFromSleep(bedtimeValue, item.sleep ?? 8);
       const wakeTimeValue = roundTimeValue(item.wakeTime || fallbackWakeTime);
       const awakenings = normalizeAwakenings(item.awakenings);
+      const eventTags = normalizeEventTags(item);
+      const eventOther = normalizeEventOther(item, eventTags);
+      const eventDetail = String(item.eventDetail || item.eventDetails?.detail || item.eventDetails?.note || "").trim();
+      const legacyEvents = normalizeTags(item.events);
+      const stepsValue = normalizeSteps(item.steps);
+      const stepsSource = item.stepsSource === "auto" ? "auto" : stepsValue !== "" ? "manual" : "none";
+      const doctorTags = normalizeTags(item.doctorTags || item.visitMemoTags);
       return {
         date: item.date,
         mood: Number(item.mood) || 0,
@@ -145,12 +162,38 @@ function normalizeEntries(items) {
         meds: item.meds || "done",
         stress: item.stress || "none",
         signs: Array.isArray(item.signs) ? item.signs : [],
-        events: normalizeTags(item.events),
-        steps: normalizeSteps(item.steps),
-        doctorTags: normalizeTags(item.doctorTags),
+        events: [...new Set([...mergedEventValues(eventTags, eventOther), ...legacyEvents])],
+        eventTags,
+        eventOther,
+        eventDetail,
+        activityLevel: ["none", "low", "usual", "high"].includes(item.activityLevel) ? item.activityLevel : "none",
+        steps: stepsValue,
+        stepsSource,
+        doctorTags,
+        doctorNote: String(item.doctorNote || item.visitMemoNote || "").trim(),
         note: item.note || ""
       };
     });
+}
+
+function normalizeEventTags(item = {}) {
+  const explicit = normalizeTags(item.eventTags);
+  if (explicit.length) return explicit.filter((tag) => EVENT_TAGS.includes(tag));
+  const legacy = normalizeTags(item.events);
+  return [...new Set(legacy.map((tag) => EVENT_TAGS.includes(tag) ? tag : "その他"))];
+}
+
+function normalizeEventOther(item = {}, eventTags = []) {
+  const explicit = normalizeTags(item.eventOther);
+  const legacy = normalizeTags(item.events).filter((tag) => !EVENT_TAGS.includes(tag));
+  return [...new Set([...explicit, ...legacy])];
+}
+
+function mergedEventValues(eventTags = [], eventOther = []) {
+  return [...new Set([
+    ...eventTags.filter((tag) => tag && tag !== "その他"),
+    ...eventOther
+  ])];
 }
 
 function normalizeAwakenings(value) {
@@ -168,8 +211,9 @@ function normalizeAwakenings(value) {
 }
 
 function normalizeSteps(value) {
+  if (value === "" || value === null || value === undefined) return "";
   const steps = Number(value);
-  return Number.isFinite(steps) && steps > 0 ? Math.round(steps) : "";
+  return Number.isFinite(steps) && steps >= 0 ? Math.round(steps) : "";
 }
 
 function normalizeTags(value) {
@@ -668,9 +712,19 @@ function fillForm(entry) {
   });
   document.querySelector("#meds").value = entry?.meds || "done";
   document.querySelector("#stress").value = entry?.stress || "none";
-  document.querySelector("#events").value = tagsToInput(entry?.events);
-  document.querySelector("#steps").value = entry?.steps || "";
+  document.querySelectorAll("input[name='eventTags']").forEach((box) => {
+    box.checked = Boolean(entry?.eventTags?.includes(box.value));
+  });
+  document.querySelector("#eventOther").value = tagsToInput(entry?.eventOther);
+  document.querySelector("#eventDetail").value = entry?.eventDetail || "";
+  document.querySelector("#activityLevel").value = entry?.activityLevel || "none";
+  document.querySelector("#steps").value = entry?.steps === 0 ? "0" : entry?.steps || "";
+  document.querySelector("#stepsSource").value = entry?.stepsSource || (entry?.steps || entry?.steps === 0 ? "manual" : "none");
   document.querySelector("#note").value = entry?.note || "";
+  document.querySelector("#doctorNote").value = entry?.doctorNote || "";
+  document.querySelector("#dailyEventsPanel").open = Boolean((entry?.eventTags || []).length || (entry?.eventOther || []).length || entry?.eventDetail || (entry?.activityLevel && entry.activityLevel !== "none") || ((entry?.steps ?? "") !== "") || entry?.note);
+  document.querySelector("#notePanel").open = Boolean(entry?.note);
+  document.querySelector("#doctorMemoPanel").open = Boolean((entry?.doctorTags || []).length || entry?.doctorNote);
   document.querySelectorAll("input[name='signs']").forEach((box) => {
     box.checked = Boolean(entry?.signs?.includes(box.value));
   });
@@ -678,7 +732,46 @@ function fillForm(entry) {
     box.checked = Boolean(entry?.doctorTags?.includes(box.value));
   });
   renderAwakeningInputs();
+  updateSignSummaries();
+  updateEventFields();
   updateCalculatedFields();
+}
+
+function selectedLabelForInput(input) {
+  return input.closest("label")?.querySelector(".sign-card, span")?.textContent.trim() || input.value;
+}
+
+function updateSignSummaries() {
+  document.querySelectorAll("[data-sign-group]").forEach((group) => {
+    const checked = [...group.querySelectorAll("input[name='signs']:checked")];
+    const summary = group.querySelector("[data-sign-summary]");
+    const selected = group.querySelector("[data-sign-selected]");
+    const labels = checked.map(selectedLabelForInput);
+
+    group.classList.toggle("has-selected", Boolean(checked.length));
+    if (summary) summary.textContent = checked.length ? `${checked.length}件選択` : "未選択";
+    if (selected) {
+      selected.innerHTML = labels.map((label) => `<span>${escapeHtml(label)}</span>`).join("");
+    }
+  });
+}
+
+function updateEventFields() {
+  const eventTags = [...document.querySelectorAll("input[name='eventTags']:checked")].map((input) => input.value);
+  const otherField = document.querySelector("#eventOtherField");
+  const otherInput = document.querySelector("#eventOther");
+  const detailField = document.querySelector("#eventDetailField");
+  const stepsInput = document.querySelector("#steps");
+  const stepsSourceInput = document.querySelector("#stepsSource");
+  const hasOther = eventTags.includes("その他");
+  const hasEvent = Boolean(eventTags.length || otherInput?.value.trim());
+
+  if (otherField) otherField.hidden = !hasOther;
+  if (detailField) detailField.hidden = !hasEvent;
+  if (!hasOther && otherInput) otherInput.value = "";
+  if (stepsInput && stepsSourceInput && stepsSourceInput.value !== "auto") {
+    stepsSourceInput.value = stepsInput.value === "" ? "none" : "manual";
+  }
 }
 
 function getRisk(entry) {
@@ -686,87 +779,61 @@ function getRisk(entry) {
     return {
       level: "empty",
       title: "記録すると表示されます",
-      body: "睡眠、気分、サインをもとに注意ポイントを出します。"
+      body: "保存後、その日の睡眠と最近の平均との差を短く振り返ります。"
     };
   }
 
   const signs = new Set(entry.signs || []);
   const reasons = [];
-  let upScore = 0;
-  let downScore = 0;
-  let careScore = 0;
-
-  const sleepValue = Number(entry.actualSleep ?? entry.sleep);
-  const lowSleep = sleepValue <= 5;
-  const veryLowSleep = sleepValue <= 4;
-  const longSleep = sleepValue >= 10;
-  const highMood = Number(entry.mood) >= 3;
-  const veryHighMood = Number(entry.mood) >= 4;
-  const lowMood = Number(entry.mood) <= -3;
-  const veryLowMood = Number(entry.mood) <= -4;
-  const missedMeds = entry.meds === "missed" || entry.meds === "partial";
-  const externalLoad = (entry.events || []).length > 0;
-  const highSteps = Number(entry.steps) >= 12000;
-  const veryHighSteps = Number(entry.steps) >= 16000;
 
   if (signs.has("hopeless")) {
     return {
       level: "danger",
-      title: "緊急度が高いサインがあります",
-      body: "一人で抱えず、今すぐ信頼できる人・主治医・地域の救急相談につなげてください。",
+      title: "今日の記録から",
+      body: "強い絶望感が記録されています。一人で抱えず、信頼できる人・主治医・地域の相談先につなげてください。",
       reasons: ["強い絶望感"]
     };
   }
 
-  if (veryHighMood) { upScore += 2; reasons.push("気分がかなり高め"); }
-  else if (highMood) { upScore += 1; reasons.push("気分が高め"); }
-  if (veryLowMood) { downScore += 2; reasons.push("気分がかなり低め"); }
-  else if (lowMood) { downScore += 1; reasons.push("気分が低め"); }
-  if (veryLowSleep) { upScore += 2; careScore += 1; reasons.push("睡眠が短い"); }
-  else if (lowSleep) { upScore += 1; reasons.push("睡眠が少なめ"); }
-  if (longSleep || signs.has("sleepy")) { downScore += 1; reasons.push("眠気・睡眠多め"); }
-  if (signs.has("hardToSleep") || signs.has("nightWaking") || signs.has("earlyWaking") || signs.has("sleepDrop")) { upScore += 1; reasons.push("睡眠の乱れ"); }
-  if (signs.has("racing") || signs.has("restless") || signs.has("talkative")) { upScore += 2; reasons.push("上がりやすいサイン"); }
-  if (signs.has("caffeine") || signs.has("alcohol")) { upScore += 1; reasons.push("刺激になる要因"); }
-  if (signs.has("withdrawal") || signs.has("noReply") || signs.has("bodyHeavy") || signs.has("foggy")) { downScore += 2; reasons.push("下がりやすいサイン"); }
-  if (signs.has("lowAppetite") || signs.has("skippedMeals") || signs.has("dizzy") || signs.has("headache") || signs.has("nausea")) { careScore += 1; reasons.push("体調ケアが必要"); }
-  if (missedMeds) { careScore += 2; reasons.push("服薬の乱れ"); }
-  if (entry.stress === "high") { upScore += 1; downScore += 1; reasons.push("ストレス高め"); }
-  if (externalLoad) { careScore += 1; reasons.push("イベントあり"); }
-  if (veryHighSteps) { upScore += 1; careScore += 1; reasons.push("歩き過ぎ"); }
-  else if (highSteps) { careScore += 1; reasons.push("歩数多め"); }
+  const actual = actualSleepValue(entry);
+  const baseline = averageValue(entriesBefore(entry.date, 30), actualSleepValue);
+  const diff = actual !== null && baseline !== null ? actual - baseline : null;
+  const awakeMinutes = totalAwakeMinutes(entry.awakenings || []);
+  const awakening = (entry.awakenings || [])[0];
+  const nightFood = (entry.awakenings || []).find((item) => item.nightSnack !== "none");
+  const sentences = [];
 
-  if (upScore >= 4 || (upScore >= 3 && lowSleep)) {
-    return {
-      level: "warn",
-      title: "睡眠を優先したい日です",
-      body: "記録上では睡眠の短さや刺激になる要因が重なっています。今夜は早めの就寝と予定を増やしすぎないことを意識してもよさそうです。",
-      reasons
-    };
+  if (actual !== null) {
+    const comparison = diff === null
+      ? "最近平均との差はまだ比較できません"
+      : Math.abs(diff) < 0.3
+        ? "最近の平均と大きな差はありません"
+        : `最近の平均より${Math.abs(diff).toFixed(1)}時間${diff > 0 ? "長め" : "短め"}です`;
+    sentences.push(`昨夜は実睡眠${actual.toFixed(1)}時間で、${comparison}。`);
   }
 
-  if (downScore >= 4 || (downScore >= 3 && careScore >= 1)) {
-    return {
-      level: "warn",
-      title: "負担を軽くしたい日です",
-      body: "記録上では体調ケアを優先したいサインがいくつか見られます。食事・水分・服薬を確認し、小さな予定から始めてもよさそうです。",
-      reasons
-    };
+  if ((entry.awakenings || []).length) {
+    const foodText = nightFood ? `夜間の食事は${nightFood.foodTime || "時刻未入力"}に記録されています` : "夜間の食事はありません";
+    sentences.push(`${awakening?.startTime || "夜間"}の中途覚醒があり、起きていた合計は${formatDurationFromMinutes(awakeMinutes)}です。${foodText}。`);
+    reasons.push("中途覚醒");
   }
 
-  if (careScore >= 2 || reasons.length >= 3) {
-    return {
-      level: "steady",
-      title: "変化をメモしておきたい日です",
-      body: "睡眠・食事・服薬とイベントの影響をメモしておくと、受診時に共有してもよい変化として振り返りやすくなります。",
-      reasons
-    };
+  if (diff !== null && diff <= -1) {
+    sentences.push("短い睡眠が続く場合は、受診時に共有できるよう記録しておきましょう。");
+    reasons.push("睡眠短め");
   }
+
+  if (!sentences.length) {
+    sentences.push("今日は大きな変化は見つかりませんでした。");
+  }
+
+  if (entry.meds === "missed" || entry.meds === "partial") reasons.push("服薬メモ");
+  if (nightFood) reasons.push(nightFood.nightSnack === "binge" ? "夜食・過食" : "夜食");
 
   return {
-    level: "steady",
-    title: "睡眠リズムは比較的安定しています",
-    body: "記録上では大きな乱れは少ないようです。気になる変化だけ短くメモしておきましょう。",
+    level: diff !== null && diff <= -1 ? "warn" : "steady",
+    title: "今日の記録から",
+    body: sentences.slice(0, 3).join(""),
     reasons
   };
 }
@@ -1071,8 +1138,8 @@ function averageSleepFor(items) {
 }
 
 function exerciseSleepInsight(items) {
-  const exerciseDays = items.filter((entry) => (entry.signs || []).includes("exercise") || Number(entry.steps) >= 5000);
-  const noExerciseDays = items.filter((entry) => !((entry.signs || []).includes("exercise") || Number(entry.steps) >= 5000));
+  const exerciseDays = items.filter(hasExerciseRecord);
+  const noExerciseDays = items.filter((entry) => !hasExerciseRecord(entry));
   const exerciseAvg = averageSleepFor(exerciseDays);
   const restAvg = averageSleepFor(noExerciseDays);
   if (exerciseDays.length < 2 || noExerciseDays.length < 2 || exerciseAvg === null || restAvg === null) {
@@ -1112,150 +1179,582 @@ function foodSummary(items) {
   return { count: foodItems.length, binge: bingeItems.length, time };
 }
 
+function entriesForTrendPeriod() {
+  return entriesAscending(trendPeriod);
+}
+
+function formatCount(value, unit = "回") {
+  return `${Number(value || 0).toLocaleString()}${unit}`;
+}
+
+function standardDeviation(values) {
+  const valid = values.filter(Number.isFinite);
+  if (valid.length < 2) return null;
+  const average = valid.reduce((sum, value) => sum + value, 0) / valid.length;
+  const variance = valid.reduce((sum, value) => sum + ((value - average) ** 2), 0) / valid.length;
+  return Math.sqrt(variance);
+}
+
+function sleepRegularityStats(items) {
+  const bedDrift = averageDrift(items.map((entry) => adjustedBedMinutes(entry.bedtime)));
+  const wakeDrift = averageDrift(items.map((entry) => timeToMinutes(entry.wakeTime)));
+  const sleepSpread = standardDeviation(items.map(actualSleepValue));
+  const combined = averageValue([bedDrift, wakeDrift], (value) => value);
+  const stars = combined === null ? 0 : combined <= 25 ? 5 : combined <= 45 ? 4 : combined <= 70 ? 3 : combined <= 100 ? 2 : 1;
+  return { bedDrift, wakeDrift, sleepSpread, combined, stars };
+}
+
+function foodHourBuckets(items) {
+  const buckets = [0, 1, 2, 3, 4, 5, 6].map((hour) => ({ hour, count: 0, binge: 0 }));
+  items.forEach((entry) => {
+    (entry.awakenings || []).forEach((awakening) => {
+      if (awakening.nightSnack === "none" || !awakening.foodTime) return;
+      const minutes = timeToMinutes(awakening.foodTime);
+      if (minutes === null) return;
+      const hour = Math.floor(minutes / 60);
+      const bucket = buckets.find((item) => item.hour === hour);
+      if (!bucket) return;
+      bucket.count += 1;
+      if (awakening.nightSnack === "binge") bucket.binge += 1;
+    });
+  });
+  return buckets;
+}
+
+function topHourLabel(buckets) {
+  const top = buckets.reduce((best, item) => item.count > best.count ? item : best, { hour: null, count: 0 });
+  return top.count ? `${top.hour}〜${top.hour + 1}時台` : "なし";
+}
+
+function renderPeriodControls() {
+  return `
+    <div class="trend-period-tabs" aria-label="集計期間">
+      ${TREND_PERIODS.map((period) => `
+        <button class="${trendPeriod === period ? "is-active" : ""}" data-trend-period="${period}" type="button">${period}日</button>
+      `).join("")}
+    </div>
+  `;
+}
+
+function renderTrendEmpty(message) {
+  return `<div class="trend-empty">${escapeHtml(message)}</div>`;
+}
+
+function renderMetricGrid(metrics) {
+  return `<div class="trend-metric-grid">${metrics.map((metric) => `
+    <article class="trend-metric">
+      <span>${escapeHtml(metric.label)}</span>
+      <strong>${escapeHtml(metric.value)}</strong>
+      <small>${escapeHtml(metric.unit || "")}</small>
+    </article>
+  `).join("")}</div>`;
+}
+
+function renderHorizontalBars(buckets, options = {}) {
+  const max = Math.max(1, ...buckets.map((item) => item.count));
+  return `<div class="fact-bars ${options.kind || ""}">${buckets.map((item) => {
+    const width = item.count ? Math.max(6, (item.count / max) * 100) : 0;
+    const bingeText = item.binge ? `<em>過食 ${item.binge}</em>` : "";
+    return `
+      <div class="fact-bar-row">
+        <span>${item.hour}時</span>
+        <div class="fact-bar-track"><i style="width:${width}%"></i></div>
+        <b>${item.count}</b>
+        ${bingeText}
+      </div>
+    `;
+  }).join("")}</div>`;
+}
+
+function weekdayStats(items, picker) {
+  const labels = ["日", "月", "火", "水", "木", "金", "土"];
+  return labels.map((label, index) => {
+    const dayItems = items.filter((entry) => dateToWeekday(entry.date) === index);
+    const avg = averageValue(dayItems, picker);
+    return { label, count: dayItems.length, avg };
+  });
+}
+
+function renderWeekdayFactBars(stats, options = {}) {
+  const values = stats.map((item) => item.avg).filter(Number.isFinite);
+  const min = options.min ?? (values.length ? Math.min(...values) : 0);
+  const max = options.max ?? (values.length ? Math.max(...values) : 1);
+  const spread = max - min || 1;
+  return `<div class="weekday-facts">${stats.map((item) => {
+    const height = Number.isFinite(item.avg) ? 12 + ((item.avg - min) / spread) * 76 : 4;
+    const value = Number.isFinite(item.avg) ? `${item.avg.toFixed(1)}${options.suffix || ""}` : "-";
+    const lowCount = item.count > 0 && item.count < TREND_MIN_COUNTS.average ? "is-reference" : "";
+    return `
+      <div class="weekday-fact ${lowCount}">
+        <div class="weekday-bar-area"><i style="height:${height}%"></i></div>
+        <span>${item.label}</span>
+        <b>${value}</b>
+        <small>${item.count}日</small>
+      </div>
+    `;
+  }).join("")}</div>`;
+}
+
+function normalizePoint(value, min, max) {
+  const spread = max - min || 1;
+  return 52 - ((value - min) / spread) * 44;
+}
+
+function renderLineFactChart(items, picker, options) {
+  const values = items.map((entry) => {
+    const value = Number(picker(entry));
+    return Number.isFinite(value) ? value : null;
+  });
+  const valid = values.filter((value) => value !== null);
+  if (valid.length < TREND_MIN_COUNTS.line) {
+    return renderTrendEmpty(`あと${Math.max(0, TREND_MIN_COUNTS.line - valid.length)}日分の記録で表示できます`);
+  }
+  const min = options.min ?? Math.min(...valid);
+  const max = options.max ?? Math.max(...valid);
+  const points = values.map((value, index) => {
+    if (value === null) return null;
+    const x = values.length === 1 ? 50 : 6 + (index / (values.length - 1)) * 88;
+    const y = normalizePoint(value, min, max);
+    return `${x.toFixed(1)},${y.toFixed(1)}`;
+  }).filter(Boolean).join(" ");
+  const first = items[0]?.date?.slice(5) || "";
+  const last = items[items.length - 1]?.date?.slice(5) || "";
+  return `
+    <div class="line-fact-chart">
+      <div class="line-axis"><span>${escapeHtml(options.maxLabel)}</span><span>${escapeHtml(options.minLabel)}</span></div>
+      <svg viewBox="0 0 100 60" preserveAspectRatio="none" aria-hidden="true">
+        <polyline points="${points}"></polyline>
+      </svg>
+      <div class="line-date-axis"><span>${escapeHtml(first)}</span><span>${escapeHtml(last)}</span></div>
+    </div>
+  `;
+}
+
+function renderSplitSleepMood(items) {
+  return `
+    <div class="split-chart">
+      <article>
+        <div class="split-chart-head"><b>実睡眠</b><span>時間</span></div>
+        ${renderLineFactChart(items, actualSleepValue, { min: 0, max: 12, minLabel: "0h", maxLabel: "12h" })}
+      </article>
+      <article>
+        <div class="split-chart-head"><b>気分</b><span>-5〜+5</span></div>
+        ${renderLineFactChart(items, (entry) => Number(entry.mood), { min: -5, max: 5, minLabel: "-5", maxLabel: "+5" })}
+      </article>
+    </div>
+  `;
+}
+
+function eventComparison(items) {
+  const groups = {};
+  items.forEach((entry) => {
+    (entry.events || []).forEach((eventName) => {
+      groups[eventName] = groups[eventName] || [];
+      groups[eventName].push(entry);
+    });
+  });
+  const event = Object.entries(groups).sort((a, b) => b[1].length - a[1].length)[0];
+  if (!event) return null;
+  const [name, withEvent] = event;
+  const withoutEvent = items.filter((entry) => !(entry.events || []).includes(name));
+  return {
+    label: name,
+    withLabel: `${name}あり`,
+    withoutLabel: `${name}なし`,
+    withCount: withEvent.length,
+    withoutCount: withoutEvent.length,
+    withAvg: averageSleepFor(withEvent),
+    withoutAvg: averageSleepFor(withoutEvent)
+  };
+}
+
+function exerciseComparison(items) {
+  const withExercise = items.filter(hasExerciseRecord);
+  const withoutExercise = items.filter((entry) => !hasExerciseRecord(entry));
+  return {
+    label: "運動",
+    withLabel: "運動あり",
+    withoutLabel: "運動なし",
+    withCount: withExercise.length,
+    withoutCount: withoutExercise.length,
+    withAvg: averageSleepFor(withExercise),
+    withoutAvg: averageSleepFor(withoutExercise)
+  };
+}
+
+function hasExerciseRecord(entry) {
+  return (entry.signs || []).includes("exercise")
+    || (entry.eventTags || []).includes("運動")
+    || (entry.events || []).includes("運動")
+    || entry.activityLevel === "high"
+    || (entry.steps !== "" && Number(entry.steps) >= 5000);
+}
+
+function renderComparisonTable(comparisons) {
+  const rows = comparisons.filter(Boolean).map((comparison) => {
+    const diff = comparison.withAvg !== null && comparison.withoutAvg !== null
+      ? comparison.withAvg - comparison.withoutAvg
+      : null;
+    const reference = comparison.withCount < TREND_MIN_COUNTS.comparison || comparison.withoutCount < TREND_MIN_COUNTS.comparison;
+    return `
+      <article class="comparison-fact">
+        <h4>${escapeHtml(comparison.label)}</h4>
+        <div><span>${escapeHtml(comparison.withLabel)}</span><b>${formatHours(comparison.withAvg)}</b><small>対象 ${comparison.withCount}日</small></div>
+        <div><span>${escapeHtml(comparison.withoutLabel)}</span><b>${formatHours(comparison.withoutAvg)}</b><small>対象 ${comparison.withoutCount}日</small></div>
+        <p>差 ${diff === null ? "-" : `${diff > 0 ? "+" : ""}${diff.toFixed(1)}h`}</p>
+        ${reference ? `<em>記録が少ないため参考値です</em>` : ""}
+      </article>
+    `;
+  }).join("");
+  return rows || renderTrendEmpty("まだ比較できる記録がありません");
+}
+
 function renderTrendDashboard() {
   if (!trendDashboard) return;
-  const recent = entriesAscending(30);
-  const seven = entriesAscending(7);
+  const recent = entriesForTrendPeriod();
+  const avgActualSleep = recent.length >= TREND_MIN_COUNTS.average ? averageSleepFor(recent) : null;
   const awakeCount = recent.reduce((sum, entry) => sum + (entry.awakenings || []).length, 0);
   const awakeMinutes = recent.reduce((sum, entry) => sum + totalAwakeMinutes(entry.awakenings || []), 0);
   const food = foodSummary(recent);
-  const avgActualSleep = averageSleepFor(recent);
-  const avg7 = averageSleepFor(seven);
-  const rhythm = sleepRegularity(seven.length >= 3 ? seven : recent);
-  const insightItems = buildAiFindings().slice(0, 4);
+  const rhythm = sleepRegularityStats(recent);
+  const awakeBuckets = awakeHourBuckets(recent);
+  const foodBuckets = foodHourBuckets(recent);
+  const sleepWeekdays = weekdayStats(recent, actualSleepValue);
+  const moodWeekdays = weekdayStats(recent, (entry) => Number(entry.mood));
+  const periodLabel = `直近${trendPeriod}日`;
+  const dataNote = recent.length < TREND_MIN_COUNTS.average
+    ? `あと${Math.max(0, TREND_MIN_COUNTS.average - recent.length)}日分の記録で平均を表示できます`
+    : `対象 ${recent.length}日`;
 
   trendDashboard.innerHTML = `
-    <section class="trend-hero-card">
+    <section class="trend-toolbar">
       <div>
-        <span>30日間の睡眠</span>
-        <strong>${formatHours(avgActualSleep)}</strong>
-        <small>平均実睡眠</small>
+        <h3>期間サマリー</h3>
+        <p>${escapeHtml(dataNote)}</p>
       </div>
-      <div class="trend-hero-metrics">
-        <p><b>${awakeCount}</b><span>中途覚醒</span></p>
-        <p><b>${food.count}</b><span>夜間の食事</span></p>
-        <p><b>${food.binge}</b><span>過食した</span></p>
-      </div>
-      <div class="trend-baseline">
-        <span>7日平均 ${formatHours(avg7)}</span>
-        <span>起きていた合計 ${formatDurationFromMinutes(awakeMinutes)}</span>
-      </div>
+      ${renderPeriodControls()}
     </section>
+    ${renderMetricGrid([
+      { label: "平均実睡眠", value: formatHours(avgActualSleep), unit: recent.length < TREND_MIN_COUNTS.average ? "3件以上で表示" : periodLabel },
+      { label: "中途覚醒", value: formatCount(awakeCount), unit: periodLabel },
+      { label: "起きていた合計", value: formatDurationFromMinutes(awakeMinutes), unit: periodLabel },
+      { label: "夜間の食事", value: formatCount(food.count), unit: periodLabel },
+      { label: "過食した自己評価", value: formatCount(food.binge), unit: periodLabel }
+    ])}
     <section class="trend-card rhythm-card">
-      <div class="trend-card-head"><h3>睡眠リズム</h3><span>${rhythm.minutes === null ? "集計中" : `平均ずれ ${Math.round(rhythm.minutes)}分`}</span></div>
+      <div class="trend-card-head"><h3>睡眠リズム</h3><span>${escapeHtml(periodLabel)}</span></div>
+      <div class="rhythm-facts">
+        <div><span>総合平均ずれ</span><b>${rhythm.combined === null ? "-" : `${Math.round(rhythm.combined)}分`}</b></div>
+        <div><span>就寝時刻</span><b>${rhythm.bedDrift === null ? "-" : `±${Math.round(rhythm.bedDrift)}分`}</b></div>
+        <div><span>起床時刻</span><b>${rhythm.wakeDrift === null ? "-" : `±${Math.round(rhythm.wakeDrift)}分`}</b></div>
+        <div><span>睡眠時間</span><b>${rhythm.sleepSpread === null ? "-" : `±${rhythm.sleepSpread.toFixed(1)}h`}</b></div>
+      </div>
       <strong class="rhythm-stars">${starText(rhythm.stars)}</strong>
-      <p class="trend-note">${escapeHtml(rhythm.text)}</p>
+      <p class="trend-note">星は表示補助です。判断は上の数値を優先してください。</p>
     </section>
     <section class="trend-card">
-      <div class="trend-card-head"><h3>🌃 中途覚醒の時間帯</h3><span>${mostCommonAwakeHour(recent)}</span></div>
-      ${renderAwakeHeatmap(recent)}
+      <div class="trend-card-head"><h3>中途覚醒の時間帯</h3><span>${escapeHtml(periodLabel)} / 最多 ${escapeHtml(topHourLabel(awakeBuckets))}</span></div>
+      ${renderHorizontalBars(awakeBuckets)}
+      <p class="trend-note">0時〜6時台。起きていた時間帯全体を30分単位で集計しています。</p>
     </section>
     <section class="trend-card">
-      <div class="trend-card-head"><h3>🍙 夜間の食事</h3><span>${commonFoodTime(recent)}</span></div>
-      ${renderFoodBars(recent)}
-      <p class="trend-note">食べた時刻をもとに集計しています。</p>
+      <div class="trend-card-head"><h3>夜間の食事時刻</h3><span>${escapeHtml(periodLabel)} / 最多 ${escapeHtml(topHourLabel(foodBuckets))}</span></div>
+      ${renderHorizontalBars(foodBuckets, { kind: "food-fact-bars" })}
+      <p class="trend-note">食べた時刻を基準に集計。過食は自己評価として別表示しています。</p>
     </section>
     <section class="trend-card">
-      <div class="trend-card-head"><h3>曜日別 睡眠</h3><span>30日</span></div>
-      ${renderWeekdayBars(recent, actualSleepValue, "h")}
+      <div class="trend-card-head"><h3>曜日別の睡眠</h3><span>${escapeHtml(periodLabel)}</span></div>
+      ${renderWeekdayFactBars(sleepWeekdays, { suffix: "h", min: 0, max: 12 })}
+      <p class="trend-note">各曜日の平均実睡眠と対象日数です。対象1〜2日は参考値です。</p>
     </section>
     <section class="trend-card">
-      <div class="trend-card-head"><h3>曜日別 気分</h3><span>30日</span></div>
-      ${renderWeekdayBars(recent, (entry) => Number(entry.mood), "")}
+      <div class="trend-card-head"><h3>曜日別の気分</h3><span>${escapeHtml(periodLabel)} / -5〜+5</span></div>
+      ${renderWeekdayFactBars(moodWeekdays, { min: -5, max: 5 })}
+      <p class="trend-note">気分スケールは -5〜+5 です。対象1〜2日は参考値です。</p>
     </section>
     <section class="trend-card wide">
-      <div class="trend-card-head"><h3>🙂 睡眠と気分</h3><span>別スケール</span></div>
-      <div class="dual-chart">
-        ${renderMiniLine(seven, (entry) => Number(entry.actualSleep ?? entry.sleep), "sleep-line")}
-        ${renderMiniLine(seven, (entry) => Number(entry.mood), "mood-line")}
+      <div class="trend-card-head"><h3>睡眠と気分</h3><span>${escapeHtml(periodLabel)}</span></div>
+      ${renderSplitSleepMood(recent)}
+      <p class="trend-note">上下に分けて表示しています。日付軸のみ共有です。</p>
+    </section>
+    <section class="trend-card wide">
+      <div class="trend-card-head"><h3>運動・イベントとの関係</h3><span>${escapeHtml(periodLabel)}</span></div>
+      <div class="comparison-grid">
+        ${renderComparisonTable([exerciseComparison(recent), eventComparison(recent)])}
       </div>
-      <div class="chart-legend"><span class="sleep-dot">睡眠</span><span class="mood-dot">気分</span></div>
-      <p class="trend-note">睡眠時間と気分は別スケールで重ねています。</p>
-    </section>
-    <section class="trend-card insights-card">
-      <div class="trend-card-head"><h3>運動・イベント</h3><span>関係メモ</span></div>
-      <ul>
-        <li>${escapeHtml(exerciseSleepInsight(recent))}</li>
-        <li>${escapeHtml(eventSleepInsight(recent))}</li>
-      </ul>
-    </section>
-    <section class="trend-card insights-card">
-      <div class="trend-card-head"><h3>あなたのデータから</h3><span>断定しないメモ</span></div>
-      <ul>${insightItems.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>
     </section>
   `;
 }
 
-function buildAiFindings() {
-  const recent = entriesAscending(30);
-  const seven = entriesAscending(7);
-  if (recent.length < 3) {
-    return [
-      "3日以上記録すると、睡眠・中途覚醒・夜間の食事の傾向が表示されます。",
-      "この画面では診断ではなく、あなたの記録上の変化だけを扱います。"
-    ];
-  }
+function hourDiffLabel(hours) {
+  const minutes = Math.round(Math.abs(hours) * 60);
+  if (minutes < 60) return `${minutes}分`;
+  const wholeHours = Math.floor(minutes / 60);
+  const rest = minutes % 60;
+  return rest ? `${wholeHours}時間${rest}分` : `${wholeHours}時間`;
+}
 
-  const findings = [];
-  const sevenSleep = averageSleepFor(seven);
-  const thirtySleep = averageSleepFor(recent);
-  if (sevenSleep !== null && thirtySleep !== null && seven.length >= 3) {
-    const diff = sevenSleep - thirtySleep;
+function averageAwakeCount(items) {
+  if (!items.length) return null;
+  return items.reduce((sum, entry) => sum + (entry.awakenings || []).length, 0) / items.length;
+}
+
+function averageAwakeMinutes(items) {
+  if (!items.length) return null;
+  return items.reduce((sum, entry) => sum + totalAwakeMinutes(entry.awakenings || []), 0) / items.length;
+}
+
+function averageNightFoodCount(items) {
+  if (!items.length) return null;
+  return items.reduce((sum, entry) => sum + (entry.awakenings || []).filter((item) => item.nightSnack !== "none").length, 0) / items.length;
+}
+
+function averageStepsValue(items) {
+  return averageValue(items, (entry) => {
+    if (entry.steps === "" || entry.steps === null || entry.steps === undefined) return null;
+    const value = Number(entry.steps);
+    return Number.isFinite(value) ? value : null;
+  });
+}
+
+function splitRecentWeeks() {
+  const latest14 = entriesAscending(14);
+  return {
+    previous: latest14.slice(0, Math.max(0, latest14.length - 7)),
+    current: latest14.slice(-7)
+  };
+}
+
+function trendCard(kind, title, body, meta = "", priority = 50, medical = false) {
+  return { kind, title, body, meta, priority, medical };
+}
+
+function buildWeekChangeFinding() {
+  const { current, previous } = splitRecentWeeks();
+  if (current.length < 7 || previous.length < 7) return null;
+
+  const changes = [];
+  const currentSleep = averageSleepFor(current);
+  const previousSleep = averageSleepFor(previous);
+  if (currentSleep !== null && previousSleep !== null) {
+    const diff = currentSleep - previousSleep;
     if (Math.abs(diff) >= 0.3) {
-      findings.push(`最近7日間の実睡眠は平均${sevenSleep.toFixed(1)}hで、30日平均との差は${diff > 0 ? "+" : ""}${diff.toFixed(1)}hです。`);
-    } else {
-      findings.push(`最近7日間の実睡眠は30日平均に近い状態です。`);
+      changes.push(`実睡眠は前の週より平均${hourDiffLabel(diff)}${diff > 0 ? "長く" : "短く"}なっています`);
     }
   }
 
-  const topAwake = mostCommonAwakeHour(seven.length >= 3 ? seven : recent);
-  const awakeCount = (seven.length >= 3 ? seven : recent).reduce((sum, entry) => sum + (entry.awakenings || []).length, 0);
-  if (awakeCount) {
-    findings.push(`記録上では、${topAwake}の中途覚醒が目立つようです。`);
+  const currentRhythm = sleepRegularityStats(current);
+  const previousRhythm = sleepRegularityStats(previous);
+  if (currentRhythm.combined !== null && previousRhythm.combined !== null) {
+    const diff = currentRhythm.combined - previousRhythm.combined;
+    if (Math.abs(diff) >= 15) {
+      changes.push(`就寝・起床時刻の平均ずれは前の週より${Math.round(Math.abs(diff))}分${diff > 0 ? "大きく" : "小さく"}なっています`);
+    }
   }
 
-  const food = foodSummary(seven.length >= 3 ? seven : recent);
-  if (food.count) {
-    findings.push(`夜間の食事は${food.time}に記録されることが多いようです。過食した自己評価は${food.binge}回あります。`);
+  const awakeDiff = averageAwakeCount(current) - averageAwakeCount(previous);
+  if (Number.isFinite(awakeDiff) && Math.abs(awakeDiff) >= 0.4) {
+    changes.push(`中途覚醒は前の週より1日あたり約${Math.abs(awakeDiff).toFixed(1)}回${awakeDiff > 0 ? "増えています" : "減っています"}`);
   }
 
-  const rhythm = sleepRegularity(seven.length >= 3 ? seven : recent);
-  if (rhythm.minutes !== null) {
-    findings.push(rhythm.text);
+  const awakeMinutesDiff = averageAwakeMinutes(current) - averageAwakeMinutes(previous);
+  if (Number.isFinite(awakeMinutesDiff) && Math.abs(awakeMinutesDiff) >= 20) {
+    changes.push(`起きていた時間は前の週より1日あたり約${Math.round(Math.abs(awakeMinutesDiff))}分${awakeMinutesDiff > 0 ? "長く" : "短く"}なっています`);
   }
 
-  findings.push(exerciseSleepInsight(recent));
-  findings.push(eventSleepInsight(recent));
-  findings.push("睡眠リズムの乱れは、双極症の変化と関連が報告されています。続く場合は、受診時に共有してもよい変化です。");
-  return [...new Set(findings)].slice(0, 7);
+  const currentMood = averageValue(current, (entry) => Number(entry.mood));
+  const previousMood = averageValue(previous, (entry) => Number(entry.mood));
+  const moodDiff = currentMood !== null && previousMood !== null ? currentMood - previousMood : null;
+  if (moodDiff !== null && Math.abs(moodDiff) >= 0.8) {
+    changes.push(`気分の平均は前の週より${Math.abs(moodDiff).toFixed(1)}ポイント${moodDiff > 0 ? "高め" : "低め"}です`);
+  }
+
+  const stepsCurrent = averageStepsValue(current);
+  const stepsPrevious = averageStepsValue(previous);
+  if (stepsCurrent !== null && stepsPrevious !== null) {
+    const diff = stepsCurrent - stepsPrevious;
+    if (Math.abs(diff) >= 1500) {
+      changes.push(`歩数は前の週より平均${Math.round(Math.abs(diff)).toLocaleString()}歩${diff > 0 ? "多め" : "少なめ"}です`);
+    }
+  }
+
+  if (!changes.length) {
+    return trendCard("stable", "今週の変化", "今週は大きな変化は見つかりませんでした。", "直近7日 vs 前7日", 90);
+  }
+
+  return trendCard("change", "今週の変化", `${changes.slice(0, 2).join("。")}。`, "直近7日 vs 前7日", 10, changes.some((item) => item.includes("実睡眠") || item.includes("時刻")));
+}
+
+function consecutiveShortSleepFinding() {
+  const recent = entriesAscending(30);
+  if (recent.length < 10) return null;
+  const baseline = averageSleepFor(recent.slice(0, -3));
+  if (baseline === null) return null;
+  let streak = 0;
+  [...recent].reverse().some((entry) => {
+    const value = actualSleepValue(entry);
+    if (value !== null && value <= baseline - 0.75) {
+      streak += 1;
+      return false;
+    }
+    return true;
+  });
+  if (streak < 3) return null;
+  return trendCard(
+    "pattern",
+    "続いているパターン",
+    `実睡眠が本人平均との差より短い日が${streak}日続いています。必要に応じて受診時に共有できます。`,
+    "本人の30日平均と比較",
+    1,
+    true
+  );
+}
+
+function repeatedAwakeHourFinding() {
+  const recent = entriesAscending(14);
+  if (recent.length < 7) return null;
+  const hourDays = {};
+  recent.forEach((entry) => {
+    const hours = new Set();
+    (entry.awakenings || []).forEach((awakening) => {
+      const start = timeToMinutes(awakening.startTime);
+      if (start === null) return;
+      const duration = Math.max(1, durationMinutes(awakening.startTime, awakening.endTime));
+      for (let offset = 0; offset < duration; offset += 30) {
+        const hour = Math.floor(((start + offset) % 1440) / 60);
+        if (hour >= 0 && hour <= 6) hours.add(hour);
+      }
+    });
+    hours.forEach((hour) => {
+      hourDays[hour] = hourDays[hour] || new Set();
+      hourDays[hour].add(entry.date);
+    });
+  });
+  const top = Object.entries(hourDays)
+    .map(([hour, dates]) => ({ hour: Number(hour), count: dates.size }))
+    .sort((a, b) => b.count - a.count)[0];
+  if (!top || top.count < 3) return null;
+  return trendCard(
+    "pattern",
+    "続いているパターン",
+    `${top.hour}〜${top.hour + 1}時台の中途覚醒が、直近2週間で${top.count}日記録されています。`,
+    "単発ではなく複数日で確認",
+    2,
+    true
+  );
+}
+
+function concentratedNightFoodFinding() {
+  const recent = entriesAscending(30);
+  if (recent.length < 7) return null;
+  const buckets = foodHourBuckets(recent);
+  const total = buckets.reduce((sum, item) => sum + item.count, 0);
+  const top = [...buckets].sort((a, b) => b.count - a.count)[0];
+  if (!top || total < 3 || top.count < 2 || top.count / total < 0.5) return null;
+  return trendCard(
+    "pattern",
+    "夜間の食事の時間帯",
+    `夜間の食事は${top.hour}〜${top.hour + 1}時台に集中しています。過食した自己評価は同じ時間帯で${top.binge}回あります。`,
+    "食べた時刻を基準に集計",
+    3
+  );
+}
+
+function missedMedsFinding() {
+  const current = entriesAscending(7);
+  if (current.length < 3) return null;
+  const count = current.filter((entry) => entry.meds === "missed" || entry.meds === "partial").length;
+  if (count < 2) return null;
+  return trendCard("meds", "服薬の記録", `服薬が予定通りではない記録が直近7日で${count}日あります。必要に応じて受診時に共有できます。`, "直近7日", 4);
+}
+
+function conditionComparisonFinding() {
+  const recent = entriesAscending(90);
+  if (recent.length < TREND_MIN_COUNTS.correlation) return null;
+  const candidates = [];
+  const exercise = exerciseComparison(recent);
+  if (exercise.withCount >= 3 && exercise.withoutCount >= 3 && exercise.withAvg !== null && exercise.withoutAvg !== null) {
+    const diff = exercise.withAvg - exercise.withoutAvg;
+    if (Math.abs(diff) >= 0.3) {
+      candidates.push(trendCard(
+        "personal",
+        "あなた固有の傾向",
+        `運動を記録した日は、その他の日より実睡眠が平均${hourDiffLabel(diff)}${diff > 0 ? "長い" : "短い"}傾向が見られます。`,
+        `対象: 運動あり${exercise.withCount}日 / なし${exercise.withoutCount}日`,
+        5
+      ));
+    }
+  }
+
+  const event = eventComparison(recent);
+  if (event && event.withCount >= 3 && event.withoutCount >= 3 && event.withAvg !== null && event.withoutAvg !== null) {
+    const diff = event.withAvg - event.withoutAvg;
+    if (Math.abs(diff) >= 0.3) {
+      candidates.push(trendCard(
+        "personal",
+        "あなた固有の傾向",
+        `「${event.label}」を記録した日は、それ以外の日より実睡眠が平均${hourDiffLabel(diff)}${diff > 0 ? "長い" : "短い"}傾向が見られます。`,
+        `対象: あり${event.withCount}日 / なし${event.withoutCount}日`,
+        6
+      ));
+    }
+  }
+
+  return candidates.sort((a, b) => a.priority - b.priority)[0] || null;
+}
+
+function buildAiFindings() {
+  const recent = entriesAscending(30);
+  if (recent.length < 7) {
+    return [
+      trendCard(
+        "empty",
+        "記録がもう少し必要です",
+        `まだ比較に必要な記録が十分ではありません。あと${Math.max(0, 7 - recent.length)}日分たまると、週ごとの変化を表示できます。`,
+        "推測は表示しません",
+        1
+      )
+    ];
+  }
+
+  const findings = [
+    consecutiveShortSleepFinding(),
+    repeatedAwakeHourFinding(),
+    concentratedNightFoodFinding(),
+    buildWeekChangeFinding(),
+    missedMedsFinding(),
+    conditionComparisonFinding()
+  ].filter(Boolean);
+
+  const unique = [];
+  const seenKinds = new Set();
+  findings.sort((a, b) => a.priority - b.priority).forEach((finding) => {
+    const key = finding.kind === "pattern" ? finding.body.slice(0, 18) : finding.kind;
+    if (seenKinds.has(key)) return;
+    seenKinds.add(key);
+    unique.push(finding);
+  });
+
+  return unique.slice(0, 5);
 }
 
 function renderAiAnalysis() {
   if (!aiAnalysis) return;
   const findings = buildAiFindings();
-  const recent = entriesAscending(30);
-  const seven = entriesAscending(7);
-  const avg7 = averageSleepFor(seven);
-  const avg30 = averageSleepFor(recent);
-  const food = foodSummary(seven.length >= 3 ? seven : recent);
-  const awakeCount = (seven.length >= 3 ? seven : recent).reduce((sum, entry) => sum + (entry.awakenings || []).length, 0);
+  const hasMedicalNote = findings.some((finding) => finding.medical);
   aiAnalysis.innerHTML = `
-    <section class="ai-hero-card">
-      <span>あなたのデータ</span>
-      <strong>${formatHours(avg7 ?? avg30)}</strong>
-      <small>最近の平均実睡眠</small>
-      <div class="ai-metrics">
-        <p><b>${awakeCount}</b><span>中途覚醒</span></p>
-        <p><b>${food.count}</b><span>夜間の食事</span></p>
-        <p><b>${food.binge}</b><span>過食した</span></p>
-      </div>
-    </section>
     <section class="ai-finding-list">
-      ${findings.map((finding) => `<article class="ai-finding"><span>記録から</span><p>${escapeHtml(finding)}</p></article>`).join("")}
+      ${findings.map((finding) => `
+        <article class="ai-finding ${finding.kind}">
+          <span>${escapeHtml(finding.title)}</span>
+          <p>${escapeHtml(finding.body)}</p>
+          ${finding.meta ? `<small>${escapeHtml(finding.meta)}</small>` : ""}
+        </article>
+      `).join("")}
     </section>
     <section class="ai-note">
-      <b>表現について</b>
-      <p>この画面は診断ではありません。「傾向があります」「記録上では」という形で、受診時に共有しやすい変化を整理します。</p>
+      <b>分析方法</b>
+      <p>この画面は保存済みデータをルールベースで比較しています。${hasMedicalNote ? "睡眠リズムの変化は双極症の体調変化と関連することが報告されています。" : ""}この表示は診断ではありません。</p>
     </section>
   `;
 }
@@ -1311,7 +1810,7 @@ function download(name, content, type) {
 }
 
 function toCsv() {
-  const rows = [["date", "mood", "bedtime", "wakeTime", "sleep", "actualSleep", "awakenings", "meds", "stress", "steps", "signs", "events", "doctorTags", "note"]];
+  const rows = [["date", "mood", "bedtime", "wakeTime", "sleep", "actualSleep", "awakenings", "meds", "stress", "activityLevel", "steps", "stepsSource", "signs", "events", "eventTags", "eventOther", "eventDetail", "doctorTags", "doctorNote", "note"]];
   sortedEntries().reverse().forEach((entry) => {
     rows.push([
       entry.date,
@@ -1323,10 +1822,16 @@ function toCsv() {
       JSON.stringify(entry.awakenings || []),
       entry.meds,
       entry.stress,
-      entry.steps || "",
+      entry.activityLevel || "none",
+      entry.steps === 0 ? 0 : entry.steps || "",
+      entry.stepsSource || "none",
       entry.signs.join("|"),
       (entry.events || []).join("|"),
+      (entry.eventTags || []).join("|"),
+      (entry.eventOther || []).join("|"),
+      entry.eventDetail || "",
       (entry.doctorTags || []).join("|"),
+      entry.doctorNote || "",
       entry.note.replace(/\n/g, " ")
     ]);
   });
@@ -1392,8 +1897,24 @@ awakeningList.addEventListener("click", (event) => {
   renderAwakeningInputs();
 });
 
+trendDashboard?.addEventListener("click", (event) => {
+  const button = event.target.closest("[data-trend-period]");
+  if (!button) return;
+  trendPeriod = Number(button.dataset.trendPeriod) || 30;
+  renderTrendDashboard();
+});
+
 entryDate.addEventListener("change", () => {
   fillForm(entryFor(entryDate.value) || { date: entryDate.value });
+});
+
+form.addEventListener("change", (event) => {
+  if (event.target.matches("input[name='signs']")) updateSignSummaries();
+  if (event.target.matches("input[name='eventTags'], #activityLevel, #steps")) updateEventFields();
+});
+
+form.addEventListener("input", (event) => {
+  if (event.target.matches("#eventOther, #steps")) updateEventFields();
 });
 
 form.addEventListener("submit", (event) => {
@@ -1403,6 +1924,15 @@ form.addEventListener("submit", (event) => {
   const roundedWakeTime = roundTimeValue(data.get("wakeTime"));
   const awakenings = syncAwakeningsFromDom();
   const signs = data.getAll("signs");
+  const eventTags = data.getAll("eventTags");
+  const eventOther = eventTags.includes("その他") ? normalizeTags(data.get("eventOther")) : [];
+  const eventDetail = String(data.get("eventDetail") || "").trim();
+  const activityLevel = ["none", "low", "usual", "high"].includes(data.get("activityLevel")) ? data.get("activityLevel") : "none";
+  const stepsValue = normalizeSteps(data.get("steps"));
+  const stepsSource = stepsValue === "" ? "none" : (data.get("stepsSource") === "auto" ? "auto" : "manual");
+  const doctorTags = data.getAll("doctorTags");
+  const doctorNote = String(data.get("doctorNote") || "").trim();
+  const note = String(data.get("note") || "").trim();
   if (awakenings.length && !signs.includes("nightWaking")) signs.push("nightWaking");
   bedtime.value = roundedBedtime;
   wakeTime.value = roundedWakeTime;
@@ -1414,13 +1944,19 @@ form.addEventListener("submit", (event) => {
     sleep: sleepHoursFromTimes(roundedBedtime, roundedWakeTime),
     actualSleep: actualSleepHours(roundedBedtime, roundedWakeTime, awakenings),
     awakenings,
-    meds: data.get("meds"),
-    stress: data.get("stress"),
-    signs,
-    events: normalizeTags(data.get("events")),
-    steps: normalizeSteps(data.get("steps")),
-    doctorTags: data.getAll("doctorTags"),
-    note: data.get("note").trim()
+      meds: data.get("meds"),
+      stress: data.get("stress"),
+      signs,
+      events: mergedEventValues(eventTags, eventOther),
+      eventTags,
+      eventOther,
+      eventDetail,
+      activityLevel,
+      steps: stepsValue,
+      stepsSource,
+      doctorTags,
+      doctorNote,
+      note
   };
   entries = [...entries.filter((item) => item.date !== entry.date), entry];
   saveEntries();
@@ -1429,6 +1965,7 @@ form.addEventListener("submit", (event) => {
 });
 
 document.querySelector("#clearToday").addEventListener("click", () => {
+  if (!window.confirm("今日の入力を消しますか？保存済みの記録は、もう一度保存するまで変更されません。")) return;
   fillForm({ date: entryDate.value });
 });
 
