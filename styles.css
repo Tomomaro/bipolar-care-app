@@ -826,16 +826,30 @@ output {
   gap: 8px;
   justify-content: space-between;
   min-height: 34px;
+  min-width: 0;
+}
+
+.sign-group summary > span {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .sign-group summary::after,
 .optional-card summary::after,
 .inline-details summary::after {
+  align-items: center;
   color: #8b8378;
   content: "›";
+  display: inline-flex;
+  flex: 0 0 24px;
   font-size: 1.1rem;
+  height: 24px;
+  justify-content: center;
+  line-height: 1;
   transform: rotate(90deg);
   transition: transform 0.18s ease;
+  width: 24px;
 }
 
 .sign-group[open] summary::after,
@@ -852,6 +866,7 @@ output {
   flex: 0 0 auto;
   font-size: 0.72rem;
   padding: 4px 8px;
+  white-space: nowrap;
 }
 
 .sign-group.has-selected summary small {
@@ -965,9 +980,11 @@ output {
 
 .optional-card summary {
   align-items: center;
-  display: grid;
-  gap: 4px 10px;
-  grid-template-columns: 1fr auto;
+  display: flex;
+  gap: 10px;
+  justify-content: space-between;
+  min-height: 42px;
+  min-width: 0;
 }
 
 .optional-card summary strong {
@@ -977,8 +994,21 @@ output {
 
 .optional-card summary span {
   color: var(--muted);
+  flex: 1 1 auto;
   font-size: 0.82rem;
   font-weight: 700;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.optional-card summary small {
+  color: var(--ink);
+  flex: 0 1 auto;
+  font-size: 0.88rem;
+  font-weight: 800;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  text-align: right;
 }
 
 .optional-card > *:not(summary) {
@@ -996,8 +1026,10 @@ output {
   align-items: center;
   color: #315e55;
   display: flex;
+  gap: 10px;
   font-weight: 800;
   justify-content: space-between;
+  min-width: 0;
 }
 
 .inline-details .field {
