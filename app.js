@@ -2,7 +2,7 @@ const STORAGE_KEY = "bipolar-care-log-v1";
 const SETTINGS_KEY = "bipolar-care-settings-v1";
 const removedDemoNote = "\u30b5\u30f3\u30d7\u30eb\u8a18\u9332";
 const signLabels = {
-  sleepDrop: "睡眠の乱れ",
+  sleepDrop: "寝すぎ",
   sleepy: "眠気",
   hardToSleep: "入眠しにくい",
   nightWaking: "中途覚醒",
@@ -16,6 +16,8 @@ const signLabels = {
   racing: "思考加速",
   anxious: "不安",
   foggy: "ぼんやり",
+  moodUp: "気分の上がり",
+  moodDown: "気分の下がり",
   talkative: "連絡増加",
   irritable: "イライラ",
   noReply: "連絡回避",
@@ -50,8 +52,7 @@ const moodEyeRight = document.querySelector("#moodEyeRight");
 const moodLabel = document.querySelector("#moodLabel");
 const moodMouth = document.querySelector("#moodMouth");
 const sleepOut = document.querySelector("#sleepOut");
-const recentList = document.querySelector("#recentList");
-const riskCard = document.querySelector("#riskCard");
+const postSaveReflection = document.querySelector("#postSaveReflection");
 const todayStatus = document.querySelector("#todayStatus");
 const trendChart = document.querySelector("#trendChart");
 const summaryGrid = document.querySelector("#summaryGrid");
@@ -61,6 +62,7 @@ const dataPreview = document.querySelector("#dataPreview");
 const tagFilterBar = document.querySelector("#tagFilterBar");
 const filteredLog = document.querySelector("#filteredLog");
 const saveToast = document.querySelector("#saveToast");
+const saveEntry = document.querySelector("#saveEntry");
 const settingsOpen = document.querySelector("#settingsOpen");
 const settingsClose = document.querySelector("#settingsClose");
 const settingsModal = document.querySelector("#settingsModal");
@@ -86,6 +88,7 @@ let settings = loadSettings();
 let reminderTimer = null;
 let formAwakenings = [];
 let trendPeriod = 30;
+let isSavingEntry = false;
 saveEntries();
 
 function isoToday() {
@@ -191,7 +194,7 @@ function normalizeEventOther(item = {}, eventTags = []) {
 
 function mergedEventValues(eventTags = [], eventOther = []) {
   return [...new Set([
-    ...eventTags.filter((tag) => tag && tag !== "その他"),
+    ...eventTags.filter(Boolean),
     ...eventOther
   ])];
 }
@@ -619,6 +622,7 @@ function awakeningLabel(value, type) {
 }
 
 function renderNightSummary() {
+  if (!nightSummary) return;
   const date = entryDate.value || isoToday();
   const saved = entryFor(date);
   const awakenings = formAwakenings;
@@ -664,6 +668,7 @@ function renderNightSummary() {
 }
 
 function renderSleepTimeline() {
+  if (!sleepTimeline) return;
   const awakenings = formAwakenings;
   const items = [
     { time: bedtime.value, label: "就寝", detail: "ベッドに入った時間", icon: "🌙", type: "sleep" },
@@ -702,6 +707,7 @@ function renderSleepTimeline() {
 
 function fillForm(entry) {
   form.reset();
+  hideTodayReflection();
   entryDate.value = entry?.date || isoToday();
   mood.value = entry?.mood ?? 0;
   bedtime.value = entry?.bedtime || "23:00";
@@ -715,15 +721,17 @@ function fillForm(entry) {
   document.querySelectorAll("input[name='eventTags']").forEach((box) => {
     box.checked = Boolean(entry?.eventTags?.includes(box.value));
   });
-  document.querySelector("#eventOther").value = tagsToInput(entry?.eventOther);
-  document.querySelector("#eventDetail").value = entry?.eventDetail || "";
+  const legacyEventOtherText = tagsToInput(entry?.eventOther);
+  const legacyEventDetailText = entry?.eventDetail || "";
+  document.querySelector("#eventOther").value = legacyEventOtherText;
+  document.querySelector("#eventDetail").value = legacyEventDetailText;
   document.querySelector("#activityLevel").value = entry?.activityLevel || "none";
   document.querySelector("#steps").value = entry?.steps === 0 ? "0" : entry?.steps || "";
   document.querySelector("#stepsSource").value = entry?.stepsSource || (entry?.steps || entry?.steps === 0 ? "manual" : "none");
-  document.querySelector("#note").value = entry?.note || "";
+  const memoParts = [entry?.note || "", legacyEventDetailText, legacyEventOtherText].filter(Boolean);
+  document.querySelector("#note").value = [...new Set(memoParts)].join("\n");
   document.querySelector("#doctorNote").value = entry?.doctorNote || "";
   document.querySelector("#dailyEventsPanel").open = Boolean((entry?.eventTags || []).length || (entry?.eventOther || []).length || entry?.eventDetail || (entry?.activityLevel && entry.activityLevel !== "none") || ((entry?.steps ?? "") !== "") || entry?.note);
-  document.querySelector("#notePanel").open = Boolean(entry?.note);
   document.querySelector("#doctorMemoPanel").open = Boolean((entry?.doctorTags || []).length || entry?.doctorNote);
   document.querySelectorAll("input[name='signs']").forEach((box) => {
     box.checked = Boolean(entry?.signs?.includes(box.value));
@@ -757,18 +765,9 @@ function updateSignSummaries() {
 }
 
 function updateEventFields() {
-  const eventTags = [...document.querySelectorAll("input[name='eventTags']:checked")].map((input) => input.value);
-  const otherField = document.querySelector("#eventOtherField");
-  const otherInput = document.querySelector("#eventOther");
-  const detailField = document.querySelector("#eventDetailField");
   const stepsInput = document.querySelector("#steps");
   const stepsSourceInput = document.querySelector("#stepsSource");
-  const hasOther = eventTags.includes("その他");
-  const hasEvent = Boolean(eventTags.length || otherInput?.value.trim());
 
-  if (otherField) otherField.hidden = !hasOther;
-  if (detailField) detailField.hidden = !hasEvent;
-  if (!hasOther && otherInput) otherInput.value = "";
   if (stepsInput && stepsSourceInput && stepsSourceInput.value !== "auto") {
     stepsSourceInput.value = stepsInput.value === "" ? "none" : "manual";
   }
@@ -838,32 +837,159 @@ function getRisk(entry) {
   };
 }
 
+function estimateTodayState(entry) {
+  const signs = new Set(entry.signs || []);
+  const actual = actualSleepValue(entry);
+  const baseline = averageValue(entriesBefore(entry.date, 30), actualSleepValue);
+  const diff = actual !== null && baseline !== null ? actual - baseline : null;
+  const awakenings = entry.awakenings || [];
+  const noResleep = awakenings.some((item) => item.resleep === "none");
+  const longResleep = awakenings.some((item) => item.resleep === "over60");
+  const concernSigns = ["sleepy", "restless", "anxious", "moodUp", "moodDown", "hardToSleep", "earlyWaking"];
+  const concernCount = concernSigns.filter((sign) => signs.has(sign)).length;
+
+  if (signs.has("hopeless")) return "rest";
+  if ((actual !== null && actual < 4.5) || (diff !== null && diff <= -2) || noResleep || concernCount >= 3 || entry.meds === "missed") {
+    return "rest";
+  }
+  if ((diff !== null && diff <= -1) || awakenings.length >= 2 || longResleep || Math.abs(Number(entry.mood)) >= 4 || concernCount >= 1 || entry.meds === "partial") {
+    return "care";
+  }
+  return "steady";
+}
+
+function reflectionStateLabel(state) {
+  return {
+    steady: "安定",
+    care: "少し気をつける",
+    rest: "休息を優先"
+  }[state] || "安定";
+}
+
+function bearMessageFor(entry, state) {
+  const actual = actualSleepValue(entry);
+  const awakenings = entry.awakenings || [];
+  if ((entry.signs || []).includes("hopeless")) {
+    return "🐻 ここに記録できたことだけでも大切です。今は一人で抱えず、信頼できる人や主治医につなげることを優先してね。";
+  }
+  if (state === "rest") {
+    if (actual !== null && actual < 4.5) return "🐻 昨夜は睡眠がかなり短めでした。今日はできるだけ休む時間を先に置いてみよう。";
+    if (awakenings.some((item) => item.resleep === "none")) return "🐻 夜中に起きたあと、眠れない時間がありました。今日は回復を優先してよさそうです。";
+    return "🐻 記録上では少し負荷が重なっています。今日は無理を足しすぎない形が合いそうです。";
+  }
+  if (state === "care") {
+    if (awakenings.length) return "🐻 昨夜は途中で起きた記録があります。今日は少しゆるめに様子を見てもよさそうです。";
+    return "🐻 いつもと少し違うサインが記録されています。今日はペースを急ぎすぎずにいこう。";
+  }
+  if (awakenings.length) return "🐻 おはよう。昨夜は途中で起きたけれど、また眠れた記録が残っています。";
+  return "🐻 おはよう。今日の記録は大きく崩れている様子は少なそうです。";
+}
+
+function buildTodayReflection(entry) {
+  const state = estimateTodayState(entry);
+  const signs = new Set(entry.signs || []);
+  const actual = actualSleepValue(entry);
+  const baseline = averageValue(entriesBefore(entry.date, 30), actualSleepValue);
+  const diff = actual !== null && baseline !== null ? actual - baseline : null;
+  const awakenings = entry.awakenings || [];
+  const awakeMinutes = totalAwakeMinutes(awakenings);
+  const nightFood = awakenings.find((item) => item.nightSnack !== "none");
+  const tags = [];
+  const lines = [];
+
+  if (signs.has("hopeless")) {
+    lines.push("強い絶望感が記録されています。");
+    lines.push("この表示は診断ではありませんが、今は一人で抱えず、信頼できる人・主治医・地域の相談先につなげることを優先してもよさそうです。");
+    tags.push("安全", "受診時に共有");
+  } else {
+    if (actual !== null) {
+      const compareText = diff === null
+        ? ""
+        : Math.abs(diff) < 0.5
+          ? "普段と大きな差はありません。"
+          : `普段より${Math.abs(diff).toFixed(1)}時間${diff > 0 ? "長め" : "短め"}です。`;
+      lines.push(`昨夜は実睡眠${actual.toFixed(1)}時間でした。${compareText}`);
+      if (diff !== null && diff <= -1) tags.push("睡眠短め");
+    }
+
+    if (awakenings.length) {
+      const resleepText = awakenings.some((item) => item.resleep === "none")
+        ? "眠れない時間があった記録です。"
+        : awakeMinutes ? `${formatDurationFromMinutes(awakeMinutes)}ほど起きていた記録です。` : "途中で起きた記録があります。";
+      lines.push(`中途覚醒は${awakenings.length}回で、${resleepText}`);
+      tags.push("中途覚醒");
+    }
+
+    if (nightFood) {
+      lines.push(nightFood.nightSnack === "binge"
+        ? "夜間の食事は、過食した自己評価として記録されています。"
+        : "夜間の食事が記録されています。");
+      tags.push(nightFood.nightSnack === "binge" ? "夜食・過食" : "夜食");
+    }
+
+    if (entry.meds === "missed" || entry.meds === "partial") {
+      lines.push(entry.meds === "missed" ? "服薬は飲めなかった記録になっています。" : "服薬は一部のみの記録になっています。");
+      tags.push("服薬メモ");
+    }
+
+    const signLabelsForEntry = (entry.signs || [])
+      .filter((sign) => ["sleepy", "restless", "anxious", "moodUp", "moodDown", "hardToSleep", "earlyWaking"].includes(sign))
+      .map((sign) => signLabels[sign])
+      .filter(Boolean);
+    if (signLabelsForEntry.length) {
+      lines.push(`${[...new Set(signLabelsForEntry)].slice(0, 2).join("、")}のサインが記録されています。`);
+    }
+
+    if (state === "steady" && lines.length < 3) lines.push("今日は大きな変化は記録されていません。普段通り過ごせそうです。");
+    if (state === "care") lines.push("今日は予定を詰め込みすぎず、少し余白を残しておくとよさそうです。");
+    if (state === "rest") lines.push("今日は休息を先に置き、必要なら受診時に共有できるよう記録を残しておきましょう。");
+  }
+
+  return {
+    state,
+    label: reflectionStateLabel(state),
+    bear: bearMessageFor(entry, state),
+    lines: lines.filter(Boolean).slice(0, 4),
+    tags: [...new Set(tags)].slice(0, 3)
+  };
+}
+
+function renderTodayReflection(entry) {
+  if (!postSaveReflection) return;
+  const reflection = buildTodayReflection(entry);
+  postSaveReflection.hidden = false;
+  postSaveReflection.className = `post-save-reflection ${reflection.state}`;
+  const tagHtml = reflection.tags.length
+    ? `<div class="reason-list">${reflection.tags.map((tag) => `<span>${escapeHtml(tag)}</span>`).join("")}</div>`
+    : "";
+  postSaveReflection.innerHTML = `
+    <p class="save-complete">今日の記録を保存しました</p>
+    <div class="bear-note">
+      <span>朝のくまさん</span>
+      <p>${escapeHtml(reflection.bear)}</p>
+      <b>状態：${escapeHtml(reflection.label)}</b>
+    </div>
+    <div class="reflection-body">
+      <span>今日の記録から</span>
+      <h2>今日の振り返り</h2>
+      ${reflection.lines.map((line) => `<p>${escapeHtml(line)}</p>`).join("")}
+      ${tagHtml}
+    </div>
+  `;
+}
+
+function hideTodayReflection() {
+  if (!postSaveReflection) return;
+  postSaveReflection.hidden = true;
+  postSaveReflection.innerHTML = "";
+}
+
 function renderRisk() {
   const today = entryFor(isoToday());
-  const risk = getRisk(today);
-  riskCard.className = `risk-card ${risk.level === "steady" || risk.level === "empty" ? "" : risk.level}`;
-  const reasonList = risk.reasons?.length
-    ? `<div class="reason-list">${[...new Set(risk.reasons)].slice(0, 5).map((reason) => `<span>${reason}</span>`).join("")}</div>`
-    : "";
-  riskCard.innerHTML = `<strong>${risk.title}</strong><p>${risk.body}</p>${reasonList}`;
   todayStatus.textContent = today ? `気分 ${today.mood} / 実睡眠 ${today.actualSleep ?? today.sleep}h` : "未記録";
 }
 
 function renderRecent() {
-  const recent = sortedEntries().slice(0, 5);
-  if (!recent.length) {
-    recentList.innerHTML = '<div class="mini-item"><strong>まだ記録がありません</strong><span>今日の記録から始められます。</span></div>';
-    return;
-  }
-
-  recentList.innerHTML = recent.map((entry) => {
-    const signs = entry.signs.length ? entry.signs.map((sign) => signLabels[sign]).join("、") : "サインなし";
-    const tags = [...(entry.events || []), ...(entry.doctorTags || [])].slice(0, 3);
-    const tagText = tags.length ? ` / ${tags.join("、")}` : "";
-    const stepText = entry.steps ? ` / ${entry.steps}歩` : "";
-    const awakeText = entry.awakenings?.length ? ` / 中途覚醒 ${entry.awakenings.length}回` : "";
-    return `<div class="mini-item"><strong>${entry.date}</strong><span>気分 ${entry.mood} / 実睡眠 ${entry.actualSleep ?? entry.sleep}h${awakeText}${stepText} / ${signs}${tagText}</span></div>`;
-  }).join("");
 }
 
 function renderSummary() {
@@ -1919,6 +2045,12 @@ form.addEventListener("input", (event) => {
 
 form.addEventListener("submit", (event) => {
   event.preventDefault();
+  if (isSavingEntry) return;
+  isSavingEntry = true;
+  if (saveEntry) {
+    saveEntry.disabled = true;
+    saveEntry.textContent = "保存中…";
+  }
   const data = new FormData(form);
   const roundedBedtime = roundTimeValue(data.get("bedtime"));
   const roundedWakeTime = roundTimeValue(data.get("wakeTime"));
@@ -1961,7 +2093,15 @@ form.addEventListener("submit", (event) => {
   entries = [...entries.filter((item) => item.date !== entry.date), entry];
   saveEntries();
   renderAll();
-  showToast("保存しました");
+  renderTodayReflection(entry);
+  showToast("今日の記録を保存しました");
+  window.setTimeout(() => {
+    isSavingEntry = false;
+    if (saveEntry) {
+      saveEntry.disabled = false;
+      saveEntry.textContent = "保存";
+    }
+  }, 450);
 });
 
 document.querySelector("#clearToday").addEventListener("click", () => {
