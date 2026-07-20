@@ -26,13 +26,6 @@
     </header>
 
     <main class="shell">
-      <nav class="tabs" aria-label="画面切り替え">
-        <button class="tab is-active" data-view="today" type="button">今日</button>
-        <button class="tab" data-view="trends" type="button">傾向</button>
-        <button class="tab" data-view="plan" type="button">AI分析</button>
-        <button class="tab" data-view="data" type="button">データ</button>
-      </nav>
-
       <section class="view is-active" id="today">
         <form class="panel entry-form" id="entryForm">
           <div class="form-head">
@@ -321,6 +314,13 @@
         </div>
       </section>
     </main>
+
+    <nav class="tabs bottom-nav" aria-label="画面切り替え">
+      <button class="tab is-active" data-view="today" type="button"><span aria-hidden="true">●</span>今日</button>
+      <button class="tab" data-view="trends" type="button"><span aria-hidden="true">⌁</span>傾向</button>
+      <button class="tab" data-view="plan" type="button"><span aria-hidden="true">✦</span>AI分析</button>
+      <button class="tab" data-view="data" type="button"><span aria-hidden="true">□</span>データ</button>
+    </nav>
 
     <div class="toast" id="saveToast" role="status" aria-live="polite">保存しました</div>
 
