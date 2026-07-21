@@ -194,7 +194,7 @@ h3 {
 }
 
 #today {
-  grid-template-columns: minmax(0, 1fr) 310px;
+  grid-template-columns: minmax(0, 1fr);
 }
 
 .panel {
