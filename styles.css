@@ -194,7 +194,7 @@ h3 {
 }
 
 #today {
-  grid-template-columns: minmax(0, 1fr) 310px;
+  grid-template-columns: minmax(0, 1fr);
 }
 
 .panel {
@@ -223,6 +223,10 @@ h3 {
 .form-head > *,
 .section-head > * {
   min-width: 0;
+}
+
+.form-head > div:first-child {
+  flex: 1 1 auto;
 }
 
 .toggle-field,
@@ -286,9 +290,10 @@ h3 {
 }
 
 .date-field {
+  flex: 0 1 240px;
   justify-self: stretch;
   max-width: 100%;
-  width: 100%;
+  width: min(240px, 100%);
 }
 
 .field span,
@@ -340,6 +345,13 @@ input[type="date"] {
   overflow: hidden;
   text-align: inherit;
   -webkit-appearance: none;
+}
+
+.date-field input[type="date"] {
+  box-sizing: border-box;
+  display: block;
+  margin: 0;
+  width: 100%;
 }
 
 input[type="date"]::-webkit-date-and-time-value {
@@ -2635,6 +2647,7 @@ output {
   }
 
   .date-field {
+    flex-basis: auto;
     justify-self: stretch;
     max-width: 100%;
     width: 100%;

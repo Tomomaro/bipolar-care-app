@@ -22,7 +22,7 @@ const signLabels = {
   irritable: "イライラ",
   noReply: "連絡回避",
   lowAppetite: "食欲低下",
-  overeating: "食べすぎ",
+  overeating: "過食",
   skippedMeals: "食事抜き",
   caffeine: "カフェイン",
   alcohol: "飲酒",
@@ -161,6 +161,7 @@ function normalizeEntries(items) {
       const stepsValue = normalizeSteps(item.steps);
       const stepsSource = item.stepsSource === "auto" ? "auto" : stepsValue !== "" ? "manual" : "none";
       const doctorTags = normalizeTags(item.doctorTags || item.visitMemoTags);
+      const signs = [...new Set((Array.isArray(item.signs) ? item.signs : []).map((sign) => sign === "spending" ? "overeating" : sign))];
       return {
         date: item.date,
         mood: Number(item.mood) || 0,
@@ -171,7 +172,7 @@ function normalizeEntries(items) {
         awakenings,
         meds: item.meds || "done",
         stress: item.stress || "none",
-        signs: Array.isArray(item.signs) ? item.signs : [],
+        signs,
         events: [...new Set([...mergedEventValues(eventTags, eventOther), ...legacyEvents])],
         eventTags,
         eventOther,
@@ -2177,8 +2178,10 @@ form.addEventListener("submit", (event) => {
   const awakenings = syncAwakeningsFromDom();
   const signs = data.getAll("signs");
   const eventTags = data.getAll("eventTags");
-  const eventOther = eventTags.includes("その他") ? normalizeTags(data.get("eventOther")) : [];
-  const eventDetail = String(data.get("eventDetail") || "").trim();
+  // fillForm folds values from older versions into the memo. New saves use
+  // one memo field instead of keeping duplicate free-form event fields.
+  const eventOther = [];
+  const eventDetail = "";
   const activityLevel = ["none", "low", "usual", "high"].includes(data.get("activityLevel")) ? data.get("activityLevel") : "none";
   const stepsValue = normalizeSteps(data.get("steps"));
   const stepsSource = stepsValue === "" ? "none" : (data.get("stepsSource") === "auto" ? "auto" : "manual");
