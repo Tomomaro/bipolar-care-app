@@ -14,7 +14,9 @@
   --shadow: 0 14px 30px rgba(106, 86, 64, 0.075);
 }
 
-* {
+*,
+*::before,
+*::after {
   box-sizing: border-box;
 }
 
@@ -201,6 +203,12 @@ h3 {
   gap: 18px;
   justify-content: space-between;
   margin-bottom: 20px;
+  min-width: 0;
+}
+
+.form-head > *,
+.section-head > * {
+  min-width: 0;
 }
 
 .toggle-field,
@@ -257,6 +265,13 @@ h3 {
 .date-field {
   display: grid;
   gap: 6px;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.date-field {
+  justify-self: end;
+  width: min(100%, 220px);
 }
 
 .field span,
@@ -280,10 +295,22 @@ textarea {
   background: #fffdf9;
   border: 1px solid #dfd4c6;
   border-radius: 6px;
+  box-sizing: border-box;
   color: var(--ink);
+  max-width: 100%;
   min-height: 42px;
+  min-width: 0;
   padding: 9px 10px;
   width: 100%;
+}
+
+input[type="date"],
+input[type="time"],
+input[type="number"],
+select {
+  inline-size: 100%;
+  max-inline-size: 100%;
+  min-inline-size: 0;
 }
 
 textarea {
@@ -1944,12 +1971,12 @@ output {
 .sleep-mood-chart {
   background: #fbfcfb;
   border: 1px solid var(--line);
-  border-radius: 12px;
+  border-radius: 16px;
   display: grid;
-  gap: 8px 10px;
-  grid-template-columns: 48px minmax(0, 1fr);
+  gap: 12px 12px;
+  grid-template-columns: 52px minmax(0, 1fr);
   min-width: 0;
-  padding: 12px;
+  padding: 16px;
   position: relative;
 }
 
@@ -1967,26 +1994,30 @@ output {
   color: #315e55;
 }
 
+.chart-plot {
+  position: relative;
+}
+
 .sleep-bar-row {
   align-items: end;
   background:
     linear-gradient(#e9eee8 1px, transparent 1px) 0 0 / 100% 50%,
     #fffdfa;
   border: 1px solid var(--line);
-  border-radius: 10px;
+  border-radius: 14px;
   display: grid;
-  gap: 1px;
-  height: 118px;
+  gap: 2px;
+  height: 128px;
   min-width: 0;
   overflow: hidden;
-  padding: 8px 4px 22px;
+  padding: 14px 6px 12px;
 }
 
 .trend-day-column {
   align-items: end;
   background: transparent;
   border: 0;
-  border-radius: 6px;
+  border-radius: 999px;
   cursor: pointer;
   display: grid;
   height: 100%;
@@ -1997,7 +2028,7 @@ output {
 }
 
 .trend-day-column.is-selected {
-  background: rgba(111, 154, 138, 0.12);
+  background: rgba(111, 154, 138, 0.1);
 }
 
 .sleep-bar {
@@ -2005,41 +2036,8 @@ output {
   border-radius: 999px 999px 4px 4px;
   display: block;
   min-height: 3px;
-  width: min(12px, 72%);
-}
-
-.sleep-mood-markers {
-  align-items: center;
-  bottom: 2px;
-  display: flex;
-  gap: 2px;
-  justify-content: center;
-  left: 0;
-  position: absolute;
-  right: 0;
-}
-
-.sleep-mood-markers b,
-.compact-legend span::before {
-  align-items: center;
-  border-radius: 999px;
-  display: inline-flex;
-  font-size: 0.58rem;
-  font-weight: 950;
-  height: 14px;
-  justify-content: center;
-  line-height: 1;
-  width: 14px;
-}
-
-.marker-awake {
-  background: #eef4f2;
-  color: #315e55;
-}
-
-.marker-food {
-  background: #fff2df;
-  color: #8a6630;
+  transition: filter 0.18s ease, transform 0.18s ease;
+  width: min(13px, 74%);
 }
 
 .mood-line-row {
@@ -2047,9 +2045,10 @@ output {
     linear-gradient(#e9eee8 1px, transparent 1px) 0 0 / 100% 50%,
     #fffdfa;
   border: 1px solid var(--line);
-  border-radius: 10px;
-  height: 104px;
+  border-radius: 14px;
+  height: 112px;
   min-width: 0;
+  overflow: hidden;
   position: relative;
 }
 
@@ -2064,25 +2063,19 @@ output {
   stroke: #d59a7b;
   stroke-linecap: round;
   stroke-linejoin: round;
-  stroke-width: 2.8;
+  stroke-width: 3;
   vector-effect: non-scaling-stroke;
 }
 
-.mood-point {
-  background: #fffdfa;
-  border: 3px solid #d59a7b;
-  border-radius: 50%;
-  cursor: pointer;
-  height: 15px;
-  padding: 0;
+.trend-selected-line {
+  background: rgba(49, 94, 85, 0.35);
+  bottom: 0;
+  pointer-events: none;
   position: absolute;
-  transform: translate(-50%, -50%);
-  width: 15px;
-}
-
-.mood-point.is-selected {
-  border-color: #315e55;
-  box-shadow: 0 0 0 4px rgba(111, 154, 138, 0.18);
+  top: 0;
+  transform: translateX(-50%);
+  width: 2px;
+  z-index: 2;
 }
 
 .date-axis-shared {
@@ -2104,12 +2097,23 @@ output {
 .compact-legend {
   flex-wrap: wrap;
   grid-column: 1 / -1;
-  gap: 8px 12px;
+  gap: 8px 14px;
+  margin-top: 2px;
 }
 
 .compact-legend span {
   align-items: center;
   display: inline-flex;
+}
+
+.compact-legend span::before {
+  align-items: center;
+  border-radius: 999px;
+  content: "";
+  display: inline-flex;
+  height: 10px;
+  justify-content: center;
+  width: 10px;
 }
 
 .legend-sleep::before {
@@ -2120,23 +2124,12 @@ output {
   background: #d59a7b;
 }
 
-.legend-awake::before {
-  background: #eef4f2;
-  color: #315e55;
-  content: "月";
-}
-
-.legend-food::before {
-  background: #fff2df;
-  color: #8a6630;
-  content: "食";
-}
-
 .trend-detail-card {
   background: #fffdfa;
   border: 1px solid rgba(111, 154, 138, 0.28);
-  border-radius: 12px;
-  box-shadow: 0 12px 26px rgba(106, 86, 64, 0.12);
+  border-left: 5px solid rgba(111, 154, 138, 0.7);
+  border-radius: 14px;
+  box-shadow: 0 14px 30px rgba(106, 86, 64, 0.1);
   display: grid;
   gap: 9px;
   grid-column: 1 / -1;
@@ -2152,14 +2145,15 @@ output {
 
 .trend-detail-card dl {
   display: grid;
-  gap: 7px;
+  gap: 8px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   margin: 0;
 }
 
 .trend-detail-card dl div {
   display: grid;
-  gap: 8px;
-  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 3px;
+  min-width: 0;
 }
 
 .trend-detail-card dt,
@@ -2172,7 +2166,7 @@ output {
 
 .trend-detail-card dd {
   color: #315e55;
-  text-align: right;
+  text-align: left;
 }
 
 .trend-detail-close {
@@ -2603,6 +2597,11 @@ output {
     display: grid;
   }
 
+  .date-field {
+    justify-self: stretch;
+    width: 100%;
+  }
+
   .toggle-field {
     justify-self: start;
   }
@@ -2619,6 +2618,10 @@ output {
   }
 
   .check-block {
+    grid-template-columns: 1fr;
+  }
+
+  .stress-inline {
     grid-template-columns: 1fr;
   }
 

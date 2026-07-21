@@ -1510,11 +1510,13 @@ function trendEntryDetails(entry) {
   const awakenings = entry.awakenings || [];
   const foodCount = awakenings.filter((item) => item.nightSnack !== "none").length;
   const eventText = (entry.eventTags?.length ? entry.eventTags : entry.events || []).slice(0, 3).join("、");
+  const steps = Number(entry.steps);
   return [
     ["実睡眠", formatHours(actualSleepValue(entry))],
     ["気分", `${Number(entry.mood) > 0 ? "+" : ""}${Number(entry.mood) || 0}`],
     ["中途覚醒", awakenings.length ? `${awakenings.length}回` : "なし"],
     ["夜間の食事", foodCount ? `${foodCount}回` : "なし"],
+    Number.isFinite(steps) && entry.stepsSource !== "none" ? ["歩数", `${steps.toLocaleString()}歩`] : null,
     eventText ? ["イベント", eventText] : null
   ].filter(Boolean);
 }
@@ -1545,40 +1547,35 @@ function renderSleepMoodChart(items) {
   const moodPoints = items.map((entry, index) => {
     const moodValue = Number(entry.mood);
     if (!Number.isFinite(moodValue)) return null;
-    const x = count === 1 ? 50 : 3 + (index / (count - 1)) * 94;
-    const y = 42 - ((Math.max(-5, Math.min(5, moodValue)) + 5) / 10) * 34;
+    const x = ((index + 0.5) / count) * 100;
+    const y = 92 - ((Math.max(-5, Math.min(5, moodValue)) + 5) / 10) * 84;
     return { x, y };
   });
   const polyline = moodPoints.filter(Boolean).map((point) => `${point.x.toFixed(2)},${point.y.toFixed(2)}`).join(" ");
   const labelStep = count <= 10 ? 1 : count <= 35 ? 5 : 15;
+  const selectedIndex = selectedTrendDate ? items.findIndex((entry) => entry.date === selectedTrendDate) : -1;
+  const selectedLine = selectedIndex >= 0 ? `<span class="trend-selected-line" style="left:${(((selectedIndex + 0.5) / count) * 100).toFixed(2)}%"></span>` : "";
   return `
     <div class="sleep-mood-chart" style="--trend-count:${count}">
       <div class="chart-side-label sleep-label"><span>実睡眠</span><b>12h</b><b>0h</b></div>
-      <div class="sleep-bar-row" style="grid-template-columns:${columns}">
+      <div class="sleep-bar-row chart-plot" style="grid-template-columns:${columns}">
+        ${selectedLine}
         ${items.map((entry) => {
           const sleepValue = actualSleepValue(entry);
           const height = Number.isFinite(sleepValue) ? Math.max(4, Math.min(100, (sleepValue / 12) * 100)) : 0;
-          const awakenings = entry.awakenings || [];
-          const hasFood = awakenings.some((item) => item.nightSnack !== "none");
           return `
             <button class="trend-day-column ${selectedTrendDate === entry.date ? "is-selected" : ""}" data-trend-detail="${escapeAttr(entry.date)}" type="button" aria-label="${escapeAttr(entry.date)}の詳細">
               <i class="sleep-bar" style="height:${height}%"></i>
-              <span class="sleep-mood-markers">
-                ${awakenings.length ? '<b class="marker-awake" title="中途覚醒あり">月</b>' : ""}
-                ${hasFood ? '<b class="marker-food" title="夜間の食事あり">食</b>' : ""}
-              </span>
             </button>
           `;
         }).join("")}
       </div>
       <div class="chart-side-label mood-label"><span>気分</span><b>+5</b><b>-5</b></div>
-      <div class="mood-line-row">
-        <svg viewBox="0 0 100 44" preserveAspectRatio="none" aria-hidden="true">
+      <div class="mood-line-row chart-plot">
+        ${selectedLine}
+        <svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
           <polyline points="${polyline}"></polyline>
         </svg>
-        ${moodPoints.map((point, index) => point ? `
-          <button class="mood-point ${selectedTrendDate === items[index].date ? "is-selected" : ""}" data-trend-detail="${escapeAttr(items[index].date)}" style="left:${point.x}%; top:${point.y}%" type="button" aria-label="${escapeAttr(items[index].date)}の気分 ${items[index].mood}"></button>
-        ` : "").join("")}
       </div>
       <div class="date-axis-shared" style="grid-template-columns:${columns}">
         ${items.map((entry, index) => `<span>${index === 0 || index === items.length - 1 || index % labelStep === 0 ? escapeHtml(entry.date.slice(5)) : ""}</span>`).join("")}
@@ -1586,8 +1583,6 @@ function renderSleepMoodChart(items) {
       <div class="chart-legend compact-legend">
         <span class="legend-sleep">実睡眠</span>
         <span class="legend-mood">気分</span>
-        <span class="legend-awake">月 中途覚醒</span>
-        <span class="legend-food">食 夜間の食事</span>
       </div>
       ${renderTrendDetailCard(items)}
     </div>
