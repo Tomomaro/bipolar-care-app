@@ -173,11 +173,10 @@
               <h3>食事・生活</h3>
               <div class="sign-options">
                 <label class="sign-option"><input type="checkbox" name="signs" value="lowAppetite"><span class="sign-card" data-icon="🍃">食欲なし</span></label>
-                <label class="sign-option"><input type="checkbox" name="signs" value="overeating"><span class="sign-card" data-icon="🍽️">食べすぎ</span></label>
+                <label class="sign-option"><input type="checkbox" name="signs" value="overeating"><span class="sign-card" data-icon="🥣">過食</span></label>
                 <label class="sign-option"><input type="checkbox" name="signs" value="skippedMeals"><span class="sign-card" data-icon="⏳">食事抜き</span></label>
                 <label class="sign-option"><input type="checkbox" name="signs" value="caffeine"><span class="sign-card" data-icon="☕">カフェイン</span></label>
                 <label class="sign-option"><input type="checkbox" name="signs" value="alcohol"><span class="sign-card" data-icon="🍷">飲酒</span></label>
-                <label class="sign-option"><input type="checkbox" name="signs" value="spending"><span class="sign-card" data-icon="🥣">過食</span></label>
                 <label class="sign-option"><input type="checkbox" name="signs" value="exercise"><span class="sign-card" data-icon="👟">運動</span></label>
               </div>
             </section>
@@ -209,7 +208,6 @@
               <label class="tag-option"><input type="checkbox" name="eventTags" value="生活環境の変化"><span>生活環境の変化</span></label>
               <label class="tag-option"><input type="checkbox" name="eventTags" value="生理"><span>生理</span></label>
               <label class="tag-option"><input type="checkbox" name="eventTags" value="体調不良"><span>体調不良</span></label>
-              <label class="tag-option"><input type="checkbox" name="eventTags" value="その他" id="eventOtherToggle"><span>その他</span></label>
             </div>
             <label class="field">
               <span>活動量</span>
@@ -223,6 +221,10 @@
             <label class="field">
               <span>歩数 任意</span>
               <input id="steps" name="steps" type="number" inputmode="numeric" min="0" step="1" placeholder="例: 12000">
+            </label>
+            <label class="field event-note-field">
+              <span>メモ 任意</span>
+              <textarea id="note" name="note" rows="3" placeholder="初出勤、外出、体調の変化など"></textarea>
             </label>
             <input id="stepsSource" name="stepsSource" type="hidden" value="none">
             <input id="eventOther" name="eventOther" type="hidden">
@@ -253,11 +255,6 @@
               <textarea id="doctorNote" name="doctorNote" rows="2" placeholder="例: 中途覚醒が続いている。薬の時間を相談したい。"></textarea>
             </label>
           </details>
-
-          <label class="field note-field">
-            <span>今日のメモ（任意）</span>
-            <textarea id="note" name="note" rows="3" placeholder="初出勤、外出、体調の変化など"></textarea>
-          </label>
 
           <div class="actions">
             <button class="primary" id="saveEntry" type="submit">保存</button>
